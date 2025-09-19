@@ -4,10 +4,10 @@ import {
   HomeOutlined,
   BookOutlined,
   UserOutlined,
-  TeamOutlined,
   SettingOutlined,
-  TrophyOutlined,
   ProfileOutlined,
+  TeamOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,9 +17,14 @@ const { Sider } = Layout;
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null; // Don't render sidebar while loading
+  }
 
   const getMenuItems = () => {
+    if (!user) return [];
     const baseItems = [
       {
         key: '/',
@@ -34,48 +39,35 @@ const Sidebar = () => {
     ];
 
     if (user?.role === 'student') {
-      baseItems.push({
-        key: '/student',
-        icon: <UserOutlined />,
-        label: 'My Learning',
-      });
+      baseItems.push(
+        {
+          key: '/student',
+          icon: <UserOutlined />,
+          label: 'My Learning',
+        },
+        {
+          key: '/progress',
+          icon: <TrophyOutlined />,
+          label: 'My Progress',
+        }
+      );
     }
 
     if (user?.role === 'teacher') {
-      baseItems.push(
-        {
-          key: '/teacher',
-          icon: <TeamOutlined />,
-          label: 'Teacher Panel',
-        },
-        {
-          key: '/tutorials/create',
-          icon: <BookOutlined />,
-          label: 'Create Tutorial',
-        }
-      );
+      baseItems.push({
+        key: '/teacher',
+        icon: <TeamOutlined />,
+        label: 'Teacher Panel',
+      });
     }
 
     if (user?.role === 'admin') {
-      baseItems.push(
-        {
-          key: '/admin',
-          icon: <SettingOutlined />,
-          label: 'Admin Panel',
-        },
-        {
-          key: '/users',
-          icon: <TeamOutlined />,
-          label: 'Manage Users',
-        }
-      );
+      baseItems.push({
+        key: '/admin',
+        icon: <SettingOutlined />,
+        label: 'Admin Panel',
+      });
     }
-
-    baseItems.push({
-      key: '/progress',
-      icon: <TrophyOutlined />,
-      label: 'My Progress',
-    });
 
     baseItems.push({
       key: '/profile',

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, List, Button, Progress, Tag, Typography, Row, Col } from 'antd';
+import { Card, Button, Progress, Tag, Typography, Row, Col } from 'antd';
 import { PlayCircleOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { tutorialService } from '../api/tutorialApi';
 
 const { Title, Text } = Typography;
 
 const StudentPage = () => {
+  const navigate = useNavigate();
   const [tutorials, setTutorials] = useState([]);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,7 @@ const StudentPage = () => {
                     type="primary" 
                     icon={getStatusIcon(userProgress.status)}
                     style={{ width: '100%' }}
+                    onClick={() => navigate(`/tutorial/${tutorial.id}`)}
                   >
                     {userProgress.status === 'completed' ? 'Review' : 
                      userProgress.status === 'in_progress' ? 'Continue' : 'Start'}

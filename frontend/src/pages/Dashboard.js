@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Statistic, Progress, List, Typography, Button } from 'antd';
 import { BookOutlined, TrophyOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import { tutorialService } from '../api/tutorialApi';
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [stats, setStats] = useState({
     totalTutorials: 0,
     completedTutorials: 0,
@@ -15,11 +15,9 @@ const Dashboard = () => {
     recentTutorials: []
   });
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user || !user.id) return; // Don't fetch data if user is not available
+    
     try {
       const [tutorials, progress] = await Promise.all([
         tutorialService.getAllTutorials(),
@@ -38,7 +36,19 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user, fetchDashboardData]);
+
+  if (loading || !user) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <div>Loading dashboard...</div>
+      </div>
+    );
+  }
 
   const getCompletionPercentage = () => {
     if (stats.totalTutorials === 0) return 0;

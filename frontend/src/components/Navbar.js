@@ -1,30 +1,49 @@
 import React from 'react';
 import { Layout, Menu, Button, Avatar, Dropdown } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const { Header } = Layout;
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
+
+  if (loading) {
+    return null; // Don't render navbar while loading
+  }
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const handleUserMenuClick = ({ key }) => {
+    if (key === 'profile') {
+      navigate('/profile');
+    } else if (key === 'logout') {
+      handleLogout();
+    }
+  };
+
+  const handleMainMenuClick = ({ key }) => {
+    if (key === 'home') {
+      navigate('/');
+    } else if (key === 'tutorials') {
+      navigate('/tutorials');
+    } else if (key === 'about') {
+      navigate('/about');
+    }
+  };
+
   const userMenu = (
-    <Menu>
+    <Menu onClick={handleUserMenuClick}>
       <Menu.Item key="profile" icon={<UserOutlined />}>
         Profile
       </Menu.Item>
-      <Menu.Item key="settings" icon={<SettingOutlined />}>
-        Settings
-      </Menu.Item>
       <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
+      <Menu.Item key="logout" icon={<LogoutOutlined />}>
         Logout
       </Menu.Item>
     </Menu>
@@ -40,6 +59,7 @@ const Navbar = () => {
         theme="dark"
         mode="horizontal"
         style={{ flex: 1, justifyContent: 'center' }}
+        onClick={handleMainMenuClick}
         items={[
           { key: 'home', label: 'Home' },
           { key: 'tutorials', label: 'Tutorials' },
@@ -48,7 +68,7 @@ const Navbar = () => {
       />
 
       <div>
-        {user ? (
+        {user && user.name ? (
           <Dropdown overlay={userMenu} placement="bottomRight">
             <Button type="text" style={{ color: 'white' }}>
               <Avatar size="small" icon={<UserOutlined />} />

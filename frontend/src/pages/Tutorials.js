@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Card, List, Button, Input, Select, Row, Col, Typography, Tag, Rate, Table, Modal } from 'antd';
-import { SearchOutlined, FilterOutlined, PlayCircleOutlined, StarOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Button, Input, Select, Row, Col, Typography, Tag, Rate, Table, Modal } from 'antd';
+import { SearchOutlined, PlayCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { tutorialService } from '../api/tutorialApi';
 
 const { Title, Text } = Typography;
@@ -17,14 +17,6 @@ const Tutorials = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [previewModal, setPreviewModal] = useState({ visible: false, tutorial: null });
 
-  useEffect(() => {
-    fetchTutorials();
-  }, []);
-
-  useEffect(() => {
-    filterTutorials();
-  }, [tutorials, searchText, selectedCategory, selectedDifficulty]);
-
   const fetchTutorials = async () => {
     try {
       const data = await tutorialService.getAllTutorials();
@@ -36,7 +28,7 @@ const Tutorials = () => {
     }
   };
 
-  const filterTutorials = () => {
+  const filterTutorials = useCallback(() => {
     let filtered = tutorials;
 
     // Search filter
@@ -58,7 +50,15 @@ const Tutorials = () => {
     }
 
     setFilteredTutorials(filtered);
-  };
+  }, [tutorials, searchText, selectedCategory, selectedDifficulty]);
+
+  useEffect(() => {
+    fetchTutorials();
+  }, []);
+
+  useEffect(() => {
+    filterTutorials();
+  }, [filterTutorials]);
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
@@ -85,8 +85,8 @@ const Tutorials = () => {
   };
 
   const handleStartTutorial = (tutorial) => {
-    // Navigate to tutorial detail page or start tutorial
-    console.log('Starting tutorial:', tutorial);
+    // Navigate to tutorial detail page
+    window.location.href = `/tutorial/${tutorial.id}`;
   };
 
   const tableColumns = [

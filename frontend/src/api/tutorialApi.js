@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { mockTutorials, mockProgress } from '../data/mockData';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -21,8 +22,10 @@ tutorialApi.interceptors.request.use((config) => {
 export const tutorialService = {
   // Get all tutorials
   getAllTutorials: async () => {
-    const response = await tutorialApi.get('/');
-    return response.data;
+    // For testing, return mock data
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(mockTutorials), 500);
+    });
   },
 
   // Get tutorial by ID
@@ -57,8 +60,10 @@ export const tutorialService = {
 
   // Get user's progress
   getUserProgress: async (userId) => {
-    const response = await tutorialApi.get(`/progress/${userId}`);
-    return response.data;
+    // For testing, return mock data
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(mockProgress), 300);
+    });
   },
 
   // Update user progress

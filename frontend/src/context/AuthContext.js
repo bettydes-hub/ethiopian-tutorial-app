@@ -22,9 +22,16 @@ export const AuthProvider = ({ children }) => {
       if (storedToken) {
         try {
           const userData = await authService.getCurrentUser();
-          setUser(userData);
-          setToken(storedToken);
+          if (userData && userData.id) {
+            setUser(userData);
+            setToken(storedToken);
+          } else {
+            // Invalid user data, clear token
+            localStorage.removeItem('token');
+            setToken(null);
+          }
         } catch (error) {
+          console.error('Auth initialization error:', error);
           // Token is invalid, clear it
           localStorage.removeItem('token');
           setToken(null);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { Form, Input, Button, Card, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,15 +11,19 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { message } = App.useApp();
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
+      console.log('Attempting login with:', values);
       const response = await authService.login(values);
+      console.log('Login response:', response);
       login(response.user, response.token);
       message.success('Login successful!');
       navigate('/');
     } catch (error) {
+      console.error('Login error:', error);
       message.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -92,6 +96,14 @@ const Login = () => {
               Sign up here
             </Link>
           </Text>
+          <div style={{ marginTop: 16, padding: 12, background: '#f0f0f0', borderRadius: 6 }}>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              <strong>Test Credentials:</strong><br />
+              Student: alemu@example.com / password<br />
+              Teacher: meseret@example.com / password<br />
+              Admin: admin@example.com / password
+            </Text>
+          </div>
         </div>
       </Card>
     </div>

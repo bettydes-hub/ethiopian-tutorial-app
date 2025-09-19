@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { mockApiResponses } from '../data/mockData';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -21,14 +22,44 @@ authApi.interceptors.request.use((config) => {
 export const authService = {
   // Login user
   login: async (credentials) => {
-    const response = await authApi.post('/login', credentials);
-    return response.data;
+    // For testing, simulate API call with mock data
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Student login
+        if (credentials.email === 'alemu@example.com' && credentials.password === 'password') {
+          resolve(mockApiResponses.login.student);
+        }
+        // Teacher login
+        else if (credentials.email === 'meseret@example.com' && credentials.password === 'password') {
+          resolve(mockApiResponses.login.teacher);
+        }
+        // Admin login
+        else if (credentials.email === 'admin@example.com' && credentials.password === 'password') {
+          resolve(mockApiResponses.login.admin);
+        }
+        // Legacy test login (defaults to student)
+        else if (credentials.email === 'test@example.com' && credentials.password === 'password') {
+          resolve(mockApiResponses.login.student);
+        }
+        else {
+          reject({ response: { data: mockApiResponses.login.error } });
+        }
+      }, 1000);
+    });
   },
 
   // Register user
   register: async (userData) => {
-    const response = await authApi.post('/register', userData);
-    return response.data;
+    // For testing, simulate API call with mock data
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (userData.email !== 'existing@example.com') {
+          resolve(mockApiResponses.register.success);
+        } else {
+          reject({ response: { data: mockApiResponses.register.error } });
+        }
+      }, 1000);
+    });
   },
 
   // Logout user
@@ -39,8 +70,10 @@ export const authService = {
 
   // Get current user
   getCurrentUser: async () => {
-    const response = await authApi.get('/me');
-    return response.data;
+    // For testing, return mock user data
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(mockApiResponses.login.student.user), 300);
+    });
   },
 
   // Refresh token
