@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { mockApiResponses } from '../data/mockData';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -19,79 +18,131 @@ authApi.interceptors.request.use((config) => {
   return config;
 });
 
+// Add response interceptor to handle token refresh
+authApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          const response = await authApi.post('/refresh', { refreshToken });
+          const { token } = response.data;
+          localStorage.setItem('token', token);
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return authApi(originalRequest);
+        }
+      } catch (refreshError) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 export const authService = {
   // Login user
   login: async (credentials) => {
-    // For testing, simulate API call with mock data
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Student login
-        if (credentials.email === 'alemu@example.com' && credentials.password === 'password') {
-          resolve(mockApiResponses.login.student);
-        }
-        // Teacher login
-        else if (credentials.email === 'meseret@example.com' && credentials.password === 'password') {
-          resolve(mockApiResponses.login.teacher);
-        }
-        // Admin login
-        else if (credentials.email === 'admin@example.com' && credentials.password === 'password') {
-          resolve(mockApiResponses.login.admin);
-        }
-        // Legacy test login (defaults to student)
-        else if (credentials.email === 'test@example.com' && credentials.password === 'password') {
-          resolve(mockApiResponses.login.student);
-        }
-        else {
-          reject({ response: { data: mockApiResponses.login.error } });
-        }
-      }, 1000);
-    });
+    try {
+      const response = await authApi.post('/login', credentials);
+      const { user, token, refreshToken } = response.data;
+      
+      // Store tokens
+      localStorage.setItem('token', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      
+      return { user, token };
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Register user
   register: async (userData) => {
-    // For testing, simulate API call with mock data
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (userData.email !== 'existing@example.com') {
-          resolve(mockApiResponses.register.success);
-        } else {
-          reject({ response: { data: mockApiResponses.register.error } });
-        }
-      }, 1000);
-    });
+    try {
+      const response = await authApi.post('/register', userData);
+      const { user, token, refreshToken } = response.data;
+      
+      // Store tokens
+      localStorage.setItem('token', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      
+      return { user, token };
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Logout user
   logout: async () => {
-    const response = await authApi.post('/logout');
-    return response.data;
+    try {
+      await authApi.post('/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear tokens regardless of API response
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+    }
   },
 
   // Get current user
   getCurrentUser: async () => {
-    // For testing, return mock user data
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(mockApiResponses.login.student.user), 300);
-    });
+    try {
+      const response = await authApi.get('/me');
+      return response.data.user;
+    } catch (error) {
+      // If token is invalid, clear it
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      throw error;
+    }
   },
 
   // Refresh token
   refreshToken: async () => {
-    const response = await authApi.post('/refresh');
-    return response.data;
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const response = await authApi.post('/refresh', { refreshToken });
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+      return { token };
+    } catch (error) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      throw error;
+    }
   },
 
   // Change password
   changePassword: async (passwordData) => {
-    const response = await authApi.post('/change-password', passwordData);
-    return response.data;
+    try {
+      const response = await authApi.post('/change-password', passwordData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Update profile
   updateProfile: async (profileData) => {
-    const response = await authApi.put('/profile', profileData);
-    return response.data;
+    try {
+      const response = await authApi.put('/profile', profileData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 };
 

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, App, Select } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Typography, App, Alert } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../api/authApi';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
@@ -17,9 +16,11 @@ const Register = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const response = await authService.register(values);
+      // Force role to be student
+      const studentData = { ...values, role: 'student' };
+      const response = await authService.register(studentData);
       login(response.user, response.token);
-      message.success('Registration successful!');
+      message.success('Registration successful! Welcome to Ethiopian Tutorial App!');
       navigate('/');
     } catch (error) {
       message.error(error.response?.data?.message || 'Registration failed');
@@ -39,12 +40,20 @@ const Register = () => {
       <Card style={{ width: 400, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Title level={2} style={{ color: '#1890ff' }}>
-            Join Us
+            Join as a Student
           </Title>
           <Text type="secondary">
-            Create your Ethiopian Tutorial App account
+            Start your Ethiopian cultural learning journey
           </Text>
         </div>
+
+        <Alert
+          message="Student Registration Only"
+          description="Only students can register directly. Teachers and admins are created by the system administrator."
+          type="info"
+          icon={<InfoCircleOutlined />}
+          style={{ marginBottom: 24 }}
+        />
 
         <Form
           name="register"
@@ -75,14 +84,9 @@ const Register = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="role"
-            rules={[{ required: true, message: 'Please select your role!' }]}
-          >
-            <Select placeholder="Select Role">
-              <Option value="student">Student</Option>
-              <Option value="teacher">Teacher</Option>
-            </Select>
+          {/* Role is automatically set to student - hidden field */}
+          <Form.Item name="role" style={{ display: 'none' }}>
+            <Input value="student" />
           </Form.Item>
 
           <Form.Item

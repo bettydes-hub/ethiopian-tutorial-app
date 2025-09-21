@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Tag, Typography, Row, Col, Statistic, Modal, Form, Input, Select, message, Popconfirm, Space, Tabs, Menu, Dropdown } from 'antd';
 import { UserOutlined, TrophyOutlined, EditOutlined, DeleteOutlined, BlockOutlined, UnlockOutlined, EyeOutlined, SettingOutlined, PlusOutlined, ClockCircleOutlined, DownOutlined, TeamOutlined, CrownOutlined, TagsOutlined } from '@ant-design/icons';
+import { userService } from '../api/userApi';
+import { tutorialService } from '../api/tutorialApi';
+import { categoryService } from '../api/categoryApi';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -25,34 +28,18 @@ const AdminPage = () => {
 
   const fetchAdminData = async () => {
     try {
-      // Mock data - replace with actual API calls
-      const mockUsers = [
-        { id: 1, name: 'Alemayehu Tadesse', email: 'student@example.com', role: 'student', status: 'active', joinDate: '2024-01-15', lastLogin: '2024-01-20', tutorialsCompleted: 3 },
-        { id: 2, name: 'Dr. Meseret Bekele', email: 'teacher@example.com', role: 'teacher', status: 'active', joinDate: '2024-01-10', lastLogin: '2024-01-20', tutorialsCreated: 5 },
-        { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'student', status: 'blocked', joinDate: '2024-01-05', lastLogin: '2024-01-18', tutorialsCompleted: 1 },
-        { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'student', status: 'active', joinDate: '2024-01-12', lastLogin: '2024-01-19', tutorialsCompleted: 2 },
-        { id: 5, name: 'Prof. Ahmed Hassan', email: 'ahmed@example.com', role: 'teacher', status: 'pending', joinDate: '2024-01-08', lastLogin: '2024-01-15', tutorialsCreated: 0 },
-      ];
-      
-      const mockTutorials = [
-        { id: 1, title: 'Amharic Basics', category: 'Language', difficulty: 'Beginner', students: 25 },
-        { id: 2, title: 'Ethiopian History', category: 'History', difficulty: 'Intermediate', students: 18 },
-        { id: 3, title: 'Traditional Cooking', category: 'Cooking', difficulty: 'Beginner', students: 32 },
-      ];
+      const [usersData, tutorialsData, categoriesData] = await Promise.all([
+        userService.getAllUsers(),
+        tutorialService.getAllTutorials(),
+        categoryService.getAllCategories()
+      ]);
 
-      const mockCategories = [
-        { id: 1, name: 'Language', description: 'Language learning tutorials', color: 'blue', tutorialCount: 15 },
-        { id: 2, name: 'Culture', description: 'Ethiopian culture and traditions', color: 'purple', tutorialCount: 8 },
-        { id: 3, name: 'History', description: 'Historical content and events', color: 'brown', tutorialCount: 12 },
-        { id: 4, name: 'Cooking', description: 'Traditional Ethiopian recipes', color: 'orange', tutorialCount: 6 },
-        { id: 5, name: 'Music', description: 'Music and dance tutorials', color: 'pink', tutorialCount: 4 },
-      ];
-
-      setUsers(mockUsers);
-      setTutorials(mockTutorials);
-      setCategories(mockCategories);
+      setUsers(usersData);
+      setTutorials(tutorialsData);
+      setCategories(categoriesData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
+      message.error('Failed to load admin data');
     } finally {
       setLoading(false);
     }
@@ -64,23 +51,37 @@ const AdminPage = () => {
     setIsUserModalVisible(true);
   };
 
-  const handleDeleteUser = (userId) => {
-    setUsers(users.filter(user => user.id !== userId));
-    message.success('User deleted successfully');
+  const handleDeleteUser = async (userId) => {
+    try {
+      await userService.deleteUser(userId);
+      setUsers(users.filter(user => user.id !== userId));
+      message.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      message.error('Failed to delete user');
+    }
   };
 
-  const handleToggleUserStatus = (userId) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { 
-            ...user, 
-            status: user.status === 'active' ? 'blocked' : 'active',
-            lastLogin: user.status === 'active' ? user.lastLogin : new Date().toISOString().split('T')[0]
-          }
-        : user
-    ));
-    const user = users.find(u => u.id === userId);
-    message.success(`User ${user.status === 'active' ? 'blocked' : 'unblocked'} successfully`);
+  const handleToggleUserStatus = async (userId) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      if (user.status === 'active') {
+        await userService.blockUser(userId);
+        setUsers(users.map(u => 
+          u.id === userId ? { ...u, status: 'blocked' } : u
+        ));
+        message.success('User blocked successfully');
+      } else {
+        await userService.unblockUser(userId);
+        setUsers(users.map(u => 
+          u.id === userId ? { ...u, status: 'active' } : u
+        ));
+        message.success('User unblocked successfully');
+      }
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      message.error('Failed to update user status');
+    }
   };
 
 
@@ -141,17 +142,21 @@ const AdminPage = () => {
       const values = await form.validateFields();
       
       if (editingUser) {
+        const updatedUser = await userService.updateUser(editingUser.id, values);
         setUsers(users.map(user => 
-          user.id === editingUser.id ? { ...user, ...values } : user
+          user.id === editingUser.id ? updatedUser : user
         ));
+        message.success('User updated successfully');
       } else {
-        const newUser = { id: Date.now(), ...values, joinDate: new Date().toISOString().split('T')[0] };
+        const newUser = await userService.createUser(values);
         setUsers([...users, newUser]);
+        message.success('User created successfully');
       }
       
       setIsUserModalVisible(false);
     } catch (error) {
       console.error('Error saving user:', error);
+      message.error('Failed to save user');
     }
   };
 
@@ -168,9 +173,15 @@ const AdminPage = () => {
     setIsCategoryModalVisible(true);
   };
 
-  const handleDeleteCategory = (categoryId) => {
-    setCategories(categories.filter(cat => cat.id !== categoryId));
-    message.success('Category deleted successfully');
+  const handleDeleteCategory = async (categoryId) => {
+    try {
+      await categoryService.deleteCategory(categoryId);
+      setCategories(categories.filter(cat => cat.id !== categoryId));
+      message.success('Category deleted successfully');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      message.error('Failed to delete category');
+    }
   };
 
   const handleCategoryModalOk = async () => {
@@ -178,18 +189,21 @@ const AdminPage = () => {
       const values = await categoryForm.validateFields();
       
       if (editingCategory) {
+        const updatedCategory = await categoryService.updateCategory(editingCategory.id, values);
         setCategories(categories.map(cat => 
-          cat.id === editingCategory.id ? { ...cat, ...values } : cat
+          cat.id === editingCategory.id ? updatedCategory : cat
         ));
+        message.success('Category updated successfully');
       } else {
-        const newCategory = { id: Date.now(), ...values, tutorialCount: 0 };
+        const newCategory = await categoryService.createCategory(values);
         setCategories([...categories, newCategory]);
+        message.success('Category created successfully');
       }
       
       setIsCategoryModalVisible(false);
-      message.success('Category saved successfully');
     } catch (error) {
       console.error('Error saving category:', error);
+      message.error('Failed to save category');
     }
   };
 
