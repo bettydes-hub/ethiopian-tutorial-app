@@ -1,53 +1,71 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const categorySchema = new mongoose.Schema({
+const Category = sequelize.define('Category', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
   name: {
-    type: String,
-    required: [true, 'Category name is required'],
+    type: DataTypes.STRING(100),
+    allowNull: false,
     unique: true,
-    trim: true,
-    maxlength: [50, 'Category name cannot exceed 50 characters']
+    validate: {
+      notEmpty: true,
+      len: [1, 100]
+    }
   },
   description: {
-    type: String,
-    required: [true, 'Category description is required'],
-    trim: true,
-    maxlength: [200, 'Description cannot exceed 200 characters']
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   color: {
-    type: String,
-    required: [true, 'Category color is required'],
-    match: [/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Please enter a valid hex color code'],
-    default: '#3B82F6'
+    type: DataTypes.STRING(7),
+    defaultValue: '#1890ff',
+    validate: {
+      is: /^#[0-9A-F]{6}$/i
+    }
   },
-  tutorialCount: {
-    type: Number,
-    default: 0
+  icon: {
+    type: DataTypes.STRING(100),
+    defaultValue: 'BookOutlined'
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  tutorial_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
-  timestamps: true
+  tableName: 'categories',
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['name']
+    },
+    {
+      fields: ['is_active']
+    }
+  ]
 });
 
-// Index for better query performance
-categorySchema.index({ name: 1 });
-categorySchema.index({ isActive: 1 });
-
-// Update tutorial count when tutorials are added/removed
-categorySchema.methods.updateTutorialCount = async function() {
-  const Tutorial = mongoose.model('Tutorial');
-  const count = await Tutorial.countDocuments({ category: this.name, isPublished: true });
-  this.tutorialCount = count;
-  return this.save({ validateBeforeSave: false });
+// Instance methods
+Category.prototype.updateTutorialCount = async function() {
+  const Tutorial = require('./Tutorial');
+  const count = await Tutorial.count({
+    where: {
+      category: this.name,
+      is_published: true
+    }
+  });
+  this.tutorial_count = count;
+  return this.save();
 };
 
-// Remove sensitive data when converting to JSON
-categorySchema.methods.toJSON = function() {
-  const categoryObject = this.toObject();
-  return categoryObject;
-};
-
-module.exports = mongoose.model('Category', categorySchema);
+module.exports = Category;

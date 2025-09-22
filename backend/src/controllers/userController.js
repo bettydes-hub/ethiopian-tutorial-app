@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const User = require('../models/User');
 const Progress = require('../models/Progress');
 const Tutorial = require('../models/Tutorial');
@@ -20,21 +21,26 @@ const getAllUsers = async (req, res) => {
       query.status = status;
     }
     
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
-    }
+    // Build search conditions for Sequelize
+    const searchConditions = search ? {
+      [Op.or]: [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } }
+      ]
+    } : {};
+    
+    const whereClause = { ...query, ...searchConditions };
     
     // Get users with pagination
-    const users = await User.find(query)
-      .select('-password -refreshTokens')
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      attributes: { exclude: ['password'] },
+      order: [['created_at', 'DESC']],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await User.countDocuments(query);
+    const total = count;
     
     res.json(
       formatPaginatedResponse(users, {
@@ -55,7 +61,9 @@ const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id).select('-password -refreshTokens');
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ['password'] }
+    });
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -79,14 +87,14 @@ const createUser = async (req, res) => {
     const { name, email, password, role, status = 'active' } = req.body;
     
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json(
         formatResponse(false, null, '', 'User with this email already exists')
       );
     }
     
-    const user = new User({
+    const user = await User.create({
       name,
       email,
       password,
@@ -94,10 +102,8 @@ const createUser = async (req, res) => {
       status
     });
     
-    await user.save();
-    
     res.status(201).json(
-      formatResponse(true, { user: user.toJSON() }, 'User created successfully')
+      formatResponse(true, { user: user.toJSON ? user.toJSON() : user }, 'User created successfully')
     );
   } catch (error) {
     console.error('Create user error:', error);
@@ -113,7 +119,7 @@ const updateUser = async (req, res) => {
     const { id } = req.params;
     const { name, email, role, status, bio } = req.body;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -122,7 +128,7 @@ const updateUser = async (req, res) => {
     
     // Check if email is being changed and if it's already taken
     if (email && email !== user.email) {
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(400).json(
           formatResponse(false, null, '', 'Email already exists')
@@ -131,16 +137,17 @@ const updateUser = async (req, res) => {
     }
     
     // Update fields
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (role) user.role = role;
-    if (status) user.status = status;
-    if (bio !== undefined) user.bio = bio;
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (role) updateData.role = role;
+    if (status) updateData.status = status;
+    if (bio !== undefined) updateData.bio = bio;
     
-    await user.save();
+    await user.update(updateData);
     
     res.json(
-      formatResponse(true, { user: user.toJSON() }, 'User updated successfully')
+      formatResponse(true, { user: user.toJSON ? user.toJSON() : user }, 'User updated successfully')
     );
   } catch (error) {
     console.error('Update user error:', error);
@@ -155,7 +162,7 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -169,7 +176,7 @@ const deleteUser = async (req, res) => {
       );
     }
     
-    await User.findByIdAndDelete(id);
+    await user.destroy();
     
     res.json(
       formatResponse(true, null, 'User deleted successfully')
@@ -187,7 +194,7 @@ const blockUser = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -200,8 +207,7 @@ const blockUser = async (req, res) => {
       );
     }
     
-    user.status = 'blocked';
-    await user.save();
+    await user.update({ status: 'blocked' });
     
     res.json(
       formatResponse(true, null, 'User blocked successfully')
@@ -219,15 +225,14 @@ const unblockUser = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
       );
     }
     
-    user.status = 'active';
-    await user.save();
+    await user.update({ status: 'active' });
     
     res.json(
       formatResponse(true, null, 'User unblocked successfully')
@@ -245,7 +250,7 @@ const approveTeacher = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -258,8 +263,7 @@ const approveTeacher = async (req, res) => {
       );
     }
     
-    user.status = 'active';
-    await user.save();
+    await user.update({ status: 'active' });
     
     res.json(
       formatResponse(true, null, 'Teacher approved successfully')
@@ -277,7 +281,7 @@ const getUserStats = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -285,18 +289,18 @@ const getUserStats = async (req, res) => {
     }
     
     // Get user's progress
-    const progress = await Progress.find({ userId: id });
+    const progress = await Progress.findAll({ where: { user_id: id } });
     const completedTutorials = progress.filter(p => p.status === 'completed').length;
     const inProgressTutorials = progress.filter(p => p.status === 'in_progress').length;
     
     // Get user's created tutorials (for teachers)
     let createdTutorials = 0;
     if (user.role === 'teacher' || user.role === 'admin') {
-      createdTutorials = await Tutorial.countDocuments({ teacherId: id });
+      createdTutorials = await Tutorial.count({ where: { teacher_id: id } });
     }
     
     // Get total time spent
-    const totalTimeSpent = progress.reduce((total, p) => total + (p.timeSpent || 0), 0);
+    const totalTimeSpent = progress.reduce((total, p) => total + (p.time_spent || 0), 0);
     
     const stats = {
       totalTutorials: progress.length,
@@ -304,8 +308,8 @@ const getUserStats = async (req, res) => {
       inProgressTutorials,
       createdTutorials,
       totalTimeSpent,
-      joinDate: user.joinDate,
-      lastLogin: user.lastLogin
+      joinDate: user.join_date,
+      lastLogin: user.last_login
     };
     
     res.json(
@@ -326,7 +330,7 @@ const getUserTutorials = async (req, res) => {
     const { page, limit, status } = req.query;
     const pagination = calculatePagination(page, limit);
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -334,24 +338,29 @@ const getUserTutorials = async (req, res) => {
     }
     
     // Build progress query
-    const progressQuery = { userId: id };
+    const progressQuery = { user_id: id };
     if (status) {
       progressQuery.status = status;
     }
     
     // Get user's progress with tutorials
-    const progress = await Progress.find(progressQuery)
-      .populate('tutorialId')
-      .sort({ lastAccessed: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: progress } = await Progress.findAndCountAll({
+      where: progressQuery,
+      include: [{
+        model: Tutorial,
+        as: 'tutorial'
+      }],
+      order: [['updated_at', 'DESC']],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await Progress.countDocuments(progressQuery);
+    const total = count;
     
     // Format response
     const tutorials = progress.map(p => ({
-      progress: p.toJSON(),
-      tutorial: p.tutorialId
+      progress: p.toJSON ? p.toJSON() : p,
+      tutorial: p.tutorial
     }));
     
     res.json(
@@ -375,7 +384,7 @@ const getUserCreatedTutorials = async (req, res) => {
     const { page, limit, status } = req.query;
     const pagination = calculatePagination(page, limit);
     
-    const user = await User.findById(id);
+    const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json(
         formatResponse(false, null, '', 'User not found')
@@ -389,17 +398,19 @@ const getUserCreatedTutorials = async (req, res) => {
     }
     
     // Build tutorial query
-    const tutorialQuery = { teacherId: id };
+    const tutorialQuery = { teacher_id: id };
     if (status) {
-      tutorialQuery.isPublished = status === 'published';
+      tutorialQuery.is_published = status === 'published';
     }
     
-    const tutorials = await Tutorial.find(tutorialQuery)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: tutorials } = await Tutorial.findAndCountAll({
+      where: tutorialQuery,
+      order: [['created_at', 'DESC']],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await Tutorial.countDocuments(tutorialQuery);
+    const total = count;
     
     res.json(
       formatPaginatedResponse(tutorials, {

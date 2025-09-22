@@ -1,0 +1,28 @@
+[33mcommit c8bf356611bc99b4bfdcd7f0bbd140e74c1be426[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: bettydes-hub <your-email@example.com>
+Date:   Sun Sep 21 13:50:51 2025 +0300
+
+    Add landing page and update registration system
+    
+    - Created beautiful public landing page with hero section, features, stats, and testimonials
+    - Updated registration to only allow students by default (role automatically set to student)
+    - Added comprehensive API services for real backend integration (userApi, quizApi, categoryApi, uploadApi)
+    - Removed all mock data and updated components to use real API calls
+    - Updated routing to show landing page as default for non-authenticated users
+    - Enhanced admin panel to create users with any role
+    - Added environment configuration and comprehensive README
+    - Improved error handling and user experience throughout the application
+
+frontend/README.md
+frontend/env.example
+frontend/src/App.js
+frontend/src/api/authApi.js
+frontend/src/api/categoryApi.js
+frontend/src/api/quizApi.js
+frontend/src/api/tutorialApi.js
+frontend/src/api/uploadApi.js
+frontend/src/api/userApi.js
+frontend/src/data/mockData.js
+frontend/src/pages/AdminPage.js
+frontend/src/pages/LandingPage.js
+frontend/src/pages/Register.js

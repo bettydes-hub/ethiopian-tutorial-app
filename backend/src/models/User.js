@@ -1,120 +1,105 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const { sequelize } = require('../config/database');
 
-const userSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
   name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 100]
+    }
   },
   email: {
-    type: String,
-    required: [true, 'Email is required'],
+    type: DataTypes.STRING(255),
+    allowNull: false,
     unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    validate: {
+      isEmail: true,
+      notEmpty: true
+    }
   },
   password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't include password in queries by default
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      len: [6, 255]
+    }
   },
   role: {
-    type: String,
-    enum: ['student', 'teacher', 'admin'],
-    default: 'student'
+    type: DataTypes.ENUM('student', 'teacher', 'admin'),
+    defaultValue: 'student',
+    allowNull: false
   },
   status: {
-    type: String,
-    enum: ['active', 'pending', 'blocked'],
-    default: 'active'
+    type: DataTypes.ENUM('active', 'pending', 'blocked'),
+    defaultValue: 'active',
+    allowNull: false
   },
   bio: {
-    type: String,
-    maxlength: [500, 'Bio cannot exceed 500 characters'],
-    default: ''
-  },
-  profilePicture: {
-    type: String,
-    default: ''
-  },
-  joinDate: {
-    type: Date,
-    default: Date.now
-  },
-  lastLogin: {
-    type: Date
-  },
-  tutorialsCompleted: {
-    type: Number,
-    default: 0
-  },
-  tutorialsCreated: {
-    type: Number,
-    default: 0
-  },
-  refreshTokens: [{
-    token: String,
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      expires: 604800 // 7 days
+    type: DataTypes.TEXT,
+    validate: {
+      len: [0, 500]
     }
-  }]
+  },
+  profile_picture: {
+    type: DataTypes.STRING(500),
+    defaultValue: ''
+  },
+  join_date: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  last_login: {
+    type: DataTypes.DATE
+  },
+  tutorials_completed: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  tutorials_created: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  }
 }, {
-  timestamps: true
-});
-
-// Index for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ status: 1 });
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  tableName: 'users',
+  timestamps: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    }
   }
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
+// Instance methods
+User.prototype.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove sensitive data when converting to JSON
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  delete userObject.password;
-  delete userObject.refreshTokens;
-  return userObject;
+User.prototype.updateLastLogin = function() {
+  this.last_login = new Date();
+  return this.save();
 };
 
-// Update last login
-userSchema.methods.updateLastLogin = function() {
-  this.lastLogin = new Date();
-  return this.save({ validateBeforeSave: false });
+User.prototype.toJSON = function() {
+  const values = Object.assign({}, this.get());
+  delete values.password;
+  return values;
 };
 
-// Add refresh token
-userSchema.methods.addRefreshToken = function(token) {
-  this.refreshTokens.push({ token });
-  return this.save({ validateBeforeSave: false });
-};
-
-// Remove refresh token
-userSchema.methods.removeRefreshToken = function(token) {
-  this.refreshTokens = this.refreshTokens.filter(t => t.token !== token);
-  return this.save({ validateBeforeSave: false });
-};
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

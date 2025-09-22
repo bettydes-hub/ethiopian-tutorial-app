@@ -20,7 +20,7 @@ const register = async (req, res) => {
     const { name, email, password, role = 'student' } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json(
         formatResponse(false, null, '', 'User with this email already exists')
@@ -28,18 +28,16 @@ const register = async (req, res) => {
     }
 
     // Create new user
-    const user = new User({
+    const user = await User.create({
       name,
       email,
       password,
       role
     });
 
-    await user.save();
-
     // Generate tokens
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
     // Add refresh token to user
     await user.addRefreshToken(refreshToken);
@@ -53,7 +51,7 @@ const register = async (req, res) => {
 
     res.status(201).json(
       formatResponse(true, {
-        user: user.toJSON(),
+        user: user.toJSON ? user.toJSON() : user,
         token,
         refreshToken
       }, 'User registered successfully')
@@ -69,10 +67,12 @@ const register = async (req, res) => {
 // Login user
 const login = async (req, res) => {
   try {
+    console.log('Login attempt:', { email: req.body.email });
     const { email, password } = req.body;
 
     // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ where: { email } });
+    console.log('User found:', user ? 'Yes' : 'No');
     if (!user) {
       return res.status(401).json(
         formatResponse(false, null, '', 'Invalid credentials')
@@ -87,7 +87,9 @@ const login = async (req, res) => {
     }
 
     // Compare password
+    console.log('Comparing password...');
     const isPasswordValid = await user.comparePassword(password);
+    console.log('Password valid:', isPasswordValid);
     if (!isPasswordValid) {
       return res.status(401).json(
         formatResponse(false, null, '', 'Invalid credentials')
@@ -98,21 +100,22 @@ const login = async (req, res) => {
     await user.updateLastLogin();
 
     // Generate tokens
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
     // Add refresh token to user
     await user.addRefreshToken(refreshToken);
 
     res.json(
       formatResponse(true, {
-        user: user.toJSON(),
+        user: user.toJSON ? user.toJSON() : user,
         token,
         refreshToken
       }, 'Login successful')
     );
   } catch (error) {
     console.error('Login error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json(
       formatResponse(false, null, '', 'Login failed')
     );
@@ -185,8 +188,8 @@ const refreshToken = async (req, res) => {
     }
 
     // Generate new tokens
-    const newToken = generateToken(user._id);
-    const newRefreshToken = generateRefreshToken(user._id);
+    const newToken = generateToken(user.id);
+    const newRefreshToken = generateRefreshToken(user.id);
 
     // Remove old refresh token and add new one
     await user.removeRefreshToken(refreshToken);
@@ -219,7 +222,7 @@ const changePassword = async (req, res) => {
     const user = req.user;
 
     // Get user with password
-    const userWithPassword = await User.findById(user._id).select('+password');
+    const userWithPassword = await User.findById(user.id).select('+password');
 
     // Verify current password
     const isCurrentPasswordValid = await userWithPassword.comparePassword(currentPassword);
@@ -298,7 +301,7 @@ const requestPasswordReset = async (req, res) => {
 
     // Generate reset token
     const resetToken = jwt.sign(
-      { userId: user._id, type: 'password_reset' },
+      { userId: user.id, type: 'password_reset' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );

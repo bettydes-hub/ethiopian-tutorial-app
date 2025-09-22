@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const Tutorial = require('../models/Tutorial');
 const Progress = require('../models/Progress');
 const Category = require('../models/Category');
@@ -32,35 +33,42 @@ const getAllTutorials = async (req, res) => {
     }
     
     if (teacherId) {
-      query.teacherId = teacherId;
+      query.teacher_id = teacherId;
     }
     
     if (isPublished !== undefined) {
-      query.isPublished = isPublished === 'true';
+      query.is_published = isPublished === 'true';
     }
     
-    if (search) {
-      const searchRegex = generateSearchRegex(search);
-      query.$or = [
-        { title: searchRegex },
-        { description: searchRegex },
-        { longDescription: searchRegex },
-        { tags: { $in: [searchRegex] } }
-      ];
-    }
+    // Build search conditions for Sequelize
+    const searchConditions = search ? {
+      [Op.or]: [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+        { long_description: { [Op.iLike]: `%${search}%` } },
+        { tags: { [Op.contains]: [search] } }
+      ]
+    } : {};
     
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    const whereClause = { ...query, ...searchConditions };
+    
+    // Build sort order
+    const order = [[sortBy === 'createdAt' ? 'created_at' : sortBy, sortOrder.toUpperCase()]];
     
     // Get tutorials with pagination
-    const tutorials = await Tutorial.find(query)
-      .populate('teacherId', 'name email profilePicture')
-      .sort(sort)
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: tutorials } = await Tutorial.findAndCountAll({
+      where: whereClause,
+      include: [{
+        model: require('../models/User'),
+        as: 'teacher',
+        attributes: ['id', 'name', 'email', 'profile_picture']
+      }],
+      order: order,
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await Tutorial.countDocuments(query);
+    const total = count;
     
     res.json(
       formatPaginatedResponse(tutorials, {
@@ -81,8 +89,13 @@ const getTutorialById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const tutorial = await Tutorial.findById(id)
-      .populate('teacherId', 'name email profilePicture bio');
+    const tutorial = await Tutorial.findByPk(id, {
+      include: [{
+        model: require('../models/User'),
+        as: 'teacher',
+        attributes: ['id', 'name', 'email', 'profile_picture', 'bio']
+      }]
+    });
     
     if (!tutorial) {
       return res.status(404).json(
@@ -120,41 +133,38 @@ const createTutorial = async (req, res) => {
       resources
     } = req.body;
     
-    const teacherId = req.user._id;
+    const teacherId = req.user.id;
     
     // Verify category exists
-    const categoryExists = await Category.findOne({ name: category });
+    const categoryExists = await Category.findOne({ where: { name: category } });
     if (!categoryExists) {
       return res.status(400).json(
         formatResponse(false, null, '', 'Category does not exist')
       );
     }
     
-    const tutorial = new Tutorial({
+    const tutorial = await Tutorial.create({
       title,
       description,
-      longDescription,
+      long_description: longDescription,
       category,
       difficulty,
       duration,
-      videoUrl,
-      pdfUrl,
+      video_url: videoUrl,
+      pdf_url: pdfUrl,
       thumbnail,
-      teacherId,
+      teacher_id: teacherId,
       tags: tags || [],
       prerequisites: prerequisites || [],
-      learningObjectives: learningObjectives || [],
-      resources: resources || []
+      learning_objectives: learningObjectives || []
     });
     
-    await tutorial.save();
-    
     // Update category tutorial count
-    await categoryExists.updateTutorialCount();
+    await categoryExists.increment('tutorial_count');
     
     // Update teacher's tutorial count
     const User = require('../models/User');
-    await User.findByIdAndUpdate(teacherId, { $inc: { tutorialsCreated: 1 } });
+    await User.increment('tutorials_created', { where: { id: teacherId } });
     
     res.status(201).json(
       formatResponse(true, { tutorial }, 'Tutorial created successfully')
@@ -173,7 +183,7 @@ const updateTutorial = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    const tutorial = await Tutorial.findById(id);
+    const tutorial = await Tutorial.findByPk(id);
     if (!tutorial) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Tutorial not found')
@@ -181,20 +191,14 @@ const updateTutorial = async (req, res) => {
     }
     
     // Check if user can update this tutorial
-    if (req.user.role !== 'admin' && tutorial.teacherId.toString() !== req.user._id.toString()) {
+    if (req.user.role !== 'admin' && tutorial.teacher_id !== req.user.id) {
       return res.status(403).json(
         formatResponse(false, null, '', 'You can only update your own tutorials')
       );
     }
     
     // Update tutorial
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] !== undefined) {
-        tutorial[key] = updateData[key];
-      }
-    });
-    
-    await tutorial.save();
+    await tutorial.update(updateData);
     
     res.json(
       formatResponse(true, { tutorial }, 'Tutorial updated successfully')
@@ -212,7 +216,7 @@ const deleteTutorial = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const tutorial = await Tutorial.findById(id);
+    const tutorial = await Tutorial.findByPk(id);
     if (!tutorial) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Tutorial not found')
@@ -220,26 +224,26 @@ const deleteTutorial = async (req, res) => {
     }
     
     // Check if user can delete this tutorial
-    if (req.user.role !== 'admin' && tutorial.teacherId.toString() !== req.user._id.toString()) {
+    if (req.user.role !== 'admin' && tutorial.teacher_id !== req.user.id) {
       return res.status(403).json(
         formatResponse(false, null, '', 'You can only delete your own tutorials')
       );
     }
     
     // Delete related progress records
-    await Progress.deleteMany({ tutorialId: id });
+    await Progress.destroy({ where: { tutorial_id: id } });
     
     // Update category tutorial count
-    const category = await Category.findOne({ name: tutorial.category });
+    const category = await Category.findOne({ where: { name: tutorial.category } });
     if (category) {
-      await category.updateTutorialCount();
+      await category.decrement('tutorial_count');
     }
     
     // Update teacher's tutorial count
     const User = require('../models/User');
-    await User.findByIdAndUpdate(tutorial.teacherId, { $inc: { tutorialsCreated: -1 } });
+    await User.decrement('tutorials_created', { where: { id: tutorial.teacher_id } });
     
-    await Tutorial.findByIdAndDelete(id);
+    await tutorial.destroy();
     
     res.json(
       formatResponse(true, null, 'Tutorial deleted successfully')
@@ -261,23 +265,28 @@ const getTutorialsByCategory = async (req, res) => {
     const pagination = calculatePagination(page, limit);
     
     // Build query
-    const query = { category, isPublished: true };
+    const query = { category, is_published: true };
     
     if (difficulty) {
       query.difficulty = difficulty;
     }
     
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    // Build sort order
+    const order = [[sortBy === 'createdAt' ? 'created_at' : sortBy, sortOrder.toUpperCase()]];
     
-    const tutorials = await Tutorial.find(query)
-      .populate('teacherId', 'name email profilePicture')
-      .sort(sort)
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: tutorials } = await Tutorial.findAndCountAll({
+      where: query,
+      include: [{
+        model: require('../models/User'),
+        as: 'teacher',
+        attributes: ['id', 'name', 'email', 'profile_picture']
+      }],
+      order: order,
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await Tutorial.countDocuments(query);
+    const total = count;
     
     res.json(
       formatPaginatedResponse(tutorials, {
@@ -298,25 +307,31 @@ const updateProgress = async (req, res) => {
   try {
     const { tutorialId } = req.params;
     const { progress, status, currentSection } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
     
     // Find or create progress record
     let progressRecord = await Progress.findOne({
-      userId,
-      tutorialId
+      where: {
+        user_id: userId,
+        tutorial_id: tutorialId
+      }
     });
     
     if (!progressRecord) {
-      progressRecord = new Progress({
-        userId,
-        tutorialId,
-        progress: 0,
+      progressRecord = await Progress.create({
+        user_id: userId,
+        tutorial_id: tutorialId,
+        progress_percentage: 0,
         status: 'not_started'
       });
     }
     
     // Update progress
-    await progressRecord.updateProgress(progress, currentSection);
+    await progressRecord.update({
+      progress_percentage: progress,
+      status: status,
+      last_position: currentSection
+    });
     
     res.json(
       formatResponse(true, { progress: progressRecord }, 'Progress updated successfully')
@@ -333,22 +348,24 @@ const updateProgress = async (req, res) => {
 const getUserProgress = async (req, res) => {
   try {
     const { tutorialId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user.id;
     
     const progress = await Progress.findOne({
-      userId,
-      tutorialId
+      where: {
+        user_id: userId,
+        tutorial_id: tutorialId
+      }
     });
     
     if (!progress) {
       return res.json(
         formatResponse(true, { 
           progress: {
-            userId,
-            tutorialId,
-            progress: 0,
+            user_id: userId,
+            tutorial_id: tutorialId,
+            progress_percentage: 0,
             status: 'not_started',
-            timeSpent: 0
+            time_spent: 0
           }
         }, 'Progress retrieved successfully')
       );
@@ -368,23 +385,29 @@ const getUserProgress = async (req, res) => {
 // Get all user progress
 const getAllUserProgress = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id;
     const { page, limit, status } = req.query;
     const pagination = calculatePagination(page, limit);
     
     // Build query
-    const query = { userId };
+    const query = { user_id: userId };
     if (status) {
       query.status = status;
     }
     
-    const progress = await Progress.find(query)
-      .populate('tutorialId', 'title description category difficulty duration thumbnail')
-      .sort({ lastAccessed: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit);
+    const { count, rows: progress } = await Progress.findAndCountAll({
+      where: query,
+      include: [{
+        model: require('../models/Tutorial'),
+        as: 'tutorial',
+        attributes: ['id', 'title', 'description', 'category', 'difficulty', 'duration', 'thumbnail']
+      }],
+      order: [['updated_at', 'DESC']],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
-    const total = await Progress.countDocuments(query);
+    const total = count;
     
     res.json(
       formatPaginatedResponse(progress, {
@@ -405,7 +428,7 @@ const togglePublishStatus = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const tutorial = await Tutorial.findById(id);
+    const tutorial = await Tutorial.findByPk(id);
     if (!tutorial) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Tutorial not found')
@@ -413,17 +436,16 @@ const togglePublishStatus = async (req, res) => {
     }
     
     // Check if user can publish this tutorial
-    if (req.user.role !== 'admin' && tutorial.teacherId.toString() !== req.user._id.toString()) {
+    if (req.user.role !== 'admin' && tutorial.teacher_id !== req.user.id) {
       return res.status(403).json(
         formatResponse(false, null, '', 'You can only publish your own tutorials')
       );
     }
     
-    tutorial.isPublished = !tutorial.isPublished;
-    await tutorial.save();
+    await tutorial.update({ is_published: !tutorial.is_published });
     
     res.json(
-      formatResponse(true, { tutorial }, `Tutorial ${tutorial.isPublished ? 'published' : 'unpublished'} successfully`)
+      formatResponse(true, { tutorial }, `Tutorial ${tutorial.is_published ? 'published' : 'unpublished'} successfully`)
     );
   } catch (error) {
     console.error('Toggle publish status error:', error);
@@ -445,14 +467,21 @@ const addRating = async (req, res) => {
       );
     }
     
-    const tutorial = await Tutorial.findById(id);
+    const tutorial = await Tutorial.findByPk(id);
     if (!tutorial) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Tutorial not found')
       );
     }
     
-    await tutorial.addRating(rating);
+    // Update rating (simplified version)
+    const newRatingCount = tutorial.rating_count + 1;
+    const newRating = ((tutorial.rating * tutorial.rating_count) + rating) / newRatingCount;
+    
+    await tutorial.update({
+      rating: newRating,
+      rating_count: newRatingCount
+    });
     
     res.json(
       formatResponse(true, { tutorial }, 'Rating added successfully')

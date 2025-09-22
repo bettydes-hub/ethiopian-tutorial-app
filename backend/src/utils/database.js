@@ -1,37 +1,11 @@
-const mongoose = require('mongoose');
-const config = require('../../config/config');
-
-// Database connection options
-const dbOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  bufferMaxEntries: 0, // Disable mongoose buffering
-  bufferCommands: false, // Disable mongoose buffering
-};
+const { connectDB: sequelizeConnectDB, disconnectDB: sequelizeDisconnectDB } = require('../config/database');
 
 // Connect to database
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(config.databaseUrl, dbOptions);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected');
-    });
-    
-    return conn;
+    const sequelize = await sequelizeConnectDB();
+    console.log('PostgreSQL database connected successfully');
+    return sequelize;
   } catch (error) {
     console.error('Database connection error:', error.message);
     process.exit(1);
@@ -41,8 +15,8 @@ const connectDB = async () => {
 // Disconnect from database
 const disconnectDB = async () => {
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB disconnected');
+    await sequelizeDisconnectDB();
+    console.log('PostgreSQL database disconnected');
   } catch (error) {
     console.error('Error disconnecting from database:', error.message);
   }
@@ -51,8 +25,8 @@ const disconnectDB = async () => {
 // Handle graceful shutdown
 const gracefulShutdown = async () => {
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
+    await disconnectDB();
+    console.log('PostgreSQL connection closed through app termination');
     process.exit(0);
   } catch (error) {
     console.error('Error during graceful shutdown:', error.message);
@@ -67,20 +41,14 @@ process.on('SIGTERM', gracefulShutdown);
 // Database health check
 const healthCheck = async () => {
   try {
-    const state = mongoose.connection.readyState;
-    const states = {
-      0: 'disconnected',
-      1: 'connected',
-      2: 'connecting',
-      3: 'disconnecting'
-    };
-    
+    const { sequelize } = require('../config/database');
+    await sequelize.authenticate();
     return {
-      status: states[state] || 'unknown',
-      readyState: state,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      name: mongoose.connection.name
+      status: 'connected',
+      dialect: 'postgresql',
+      host: sequelize.config.host,
+      port: sequelize.config.port,
+      database: sequelize.config.database
     };
   } catch (error) {
     return {
@@ -93,35 +61,7 @@ const healthCheck = async () => {
 // Create indexes for better performance
 const createIndexes = async () => {
   try {
-    const User = require('../models/User');
-    const Tutorial = require('../models/Tutorial');
-    const Quiz = require('../models/Quiz');
-    const Question = require('../models/Question');
-    const Category = require('../models/Category');
-    const Progress = require('../models/Progress');
-    const QuizAttempt = require('../models/QuizAttempt');
-    
-    // User indexes
-    await User.createIndexes();
-    
-    // Tutorial indexes
-    await Tutorial.createIndexes();
-    
-    // Quiz indexes
-    await Quiz.createIndexes();
-    
-    // Question indexes
-    await Question.createIndexes();
-    
-    // Category indexes
-    await Category.createIndexes();
-    
-    // Progress indexes
-    await Progress.createIndexes();
-    
-    // QuizAttempt indexes
-    await QuizAttempt.createIndexes();
-    
+    // Sequelize automatically creates indexes based on model definitions
     console.log('Database indexes created successfully');
   } catch (error) {
     console.error('Error creating indexes:', error.message);
@@ -135,8 +75,8 @@ const seedData = async () => {
     const User = require('../models/User');
     
     // Check if data already exists
-    const categoryCount = await Category.countDocuments();
-    const userCount = await User.countDocuments();
+    const categoryCount = await Category.count();
+    const userCount = await User.count();
     
     if (categoryCount > 0 && userCount > 0) {
       console.log('Database already seeded');
@@ -177,12 +117,12 @@ const seedData = async () => {
       }
     ];
     
-    await Category.insertMany(categories);
+    await Category.bulkCreate(categories);
     console.log('Categories seeded successfully');
     
     // Seed admin user if no users exist
     if (userCount === 0) {
-      const adminUser = new User({
+      await User.create({
         name: 'Admin User',
         email: 'admin@ethiopiantutorial.com',
         password: 'Admin123!',
@@ -190,8 +130,6 @@ const seedData = async () => {
         status: 'active',
         bio: 'System administrator for the Ethiopian Tutorial Platform'
       });
-      
-      await adminUser.save();
       console.log('Admin user created successfully');
     }
     
@@ -204,16 +142,13 @@ const seedData = async () => {
 // Clear database (for testing)
 const clearDatabase = async () => {
   try {
+    const config = require('../../config/config');
     if (config.nodeEnv === 'production') {
       throw new Error('Cannot clear database in production');
     }
     
-    const collections = mongoose.connection.collections;
-    
-    for (const key in collections) {
-      const collection = collections[key];
-      await collection.deleteMany({});
-    }
+    const { sequelize } = require('../config/database');
+    await sequelize.sync({ force: true });
     
     console.log('Database cleared successfully');
   } catch (error) {
@@ -224,13 +159,16 @@ const clearDatabase = async () => {
 // Get database statistics
 const getStats = async () => {
   try {
-    const stats = await mongoose.connection.db.stats();
+    const { sequelize } = require('../config/database');
+    const queryInterface = sequelize.getQueryInterface();
+    const tables = await queryInterface.showAllTables();
+    
     return {
-      collections: stats.collections,
-      dataSize: stats.dataSize,
-      storageSize: stats.storageSize,
-      indexes: stats.indexes,
-      objects: stats.objects
+      tables: tables.length,
+      dialect: 'postgresql',
+      host: sequelize.config.host,
+      port: sequelize.config.port,
+      database: sequelize.config.database
     };
   } catch (error) {
     console.error('Error getting database stats:', error.message);

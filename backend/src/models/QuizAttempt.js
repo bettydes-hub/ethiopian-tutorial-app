@@ -1,156 +1,110 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const quizAttemptSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'User ID is required']
+const QuizAttempt = sequelize.define('QuizAttempt', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
-  quizId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Quiz',
-    required: [true, 'Quiz ID is required']
+  user_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
-  answers: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed,
-    default: new Map()
+  quiz_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'quizzes',
+      key: 'id'
+    }
   },
   score: {
-    type: Number,
-    default: 0,
-    min: [0, 'Score cannot be negative'],
-    max: [100, 'Score cannot exceed 100']
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: false,
+    validate: {
+      min: 0,
+      max: 100
+    }
   },
-  pointsEarned: {
-    type: Number,
-    default: 0,
-    min: [0, 'Points earned cannot be negative']
+  total_questions: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 1
+    }
   },
-  totalPoints: {
-    type: Number,
-    default: 0,
-    min: [0, 'Total points cannot be negative']
+  correct_answers: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 0
+    }
   },
-  timeSpent: {
-    type: Number, // in seconds
-    default: 0,
-    min: [0, 'Time spent cannot be negative']
+  time_taken: {
+    type: DataTypes.INTEGER,
+    allowNull: false, // in minutes
+    validate: {
+      min: 0
+    }
   },
-  timeLimit: {
-    type: Number, // in seconds
-    default: 0
+  answers: {
+    type: DataTypes.JSONB,
+    defaultValue: {}
   },
-  startedAt: {
-    type: Date,
-    default: Date.now
+  is_passed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false
   },
-  completedAt: {
-    type: Date
+  attempt_number: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1
   },
-  status: {
-    type: String,
-    enum: ['in_progress', 'completed', 'abandoned', 'timeout'],
-    default: 'in_progress'
+  started_at: {
+    type: DataTypes.DATE,
+    allowNull: false
   },
-  isPassed: {
-    type: Boolean,
-    default: false
-  },
-  passingScore: {
-    type: Number,
-    default: 60
-  },
-  questionResults: [{
-    questionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Question'
-    },
-    userAnswer: mongoose.Schema.Types.Mixed,
-    correctAnswer: mongoose.Schema.Types.Mixed,
-    isCorrect: Boolean,
-    pointsEarned: Number,
-    timeSpent: Number // time spent on this specific question
-  }]
+  completed_at: {
+    type: DataTypes.DATE,
+    allowNull: false
+  }
 }, {
-  timestamps: true
+  tableName: 'quiz_attempts',
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['user_id']
+    },
+    {
+      fields: ['quiz_id']
+    },
+    {
+      fields: ['is_passed']
+    },
+    {
+      fields: ['score']
+    },
+    {
+      fields: ['user_id', 'quiz_id']
+    }
+  ]
 });
 
-// Index for better query performance
-quizAttemptSchema.index({ userId: 1, quizId: 1 });
-quizAttemptSchema.index({ userId: 1, status: 1 });
-quizAttemptSchema.index({ quizId: 1, status: 1 });
-quizAttemptSchema.index({ completedAt: -1 });
-
-// Calculate score and points
-quizAttemptSchema.methods.calculateScore = async function() {
-  const Question = mongoose.model('Question');
-  const Quiz = mongoose.model('Quiz');
-  
-  const quiz = await Quiz.findById(this.quizId);
-  if (!quiz) throw new Error('Quiz not found');
-  
-  let totalPoints = 0;
-  let earnedPoints = 0;
-  
-  for (const result of this.questionResults) {
-    const question = await Question.findById(result.questionId);
-    if (!question) continue;
-    
-    totalPoints += question.points;
-    
-    if (result.isCorrect) {
-      earnedPoints += question.points;
-    }
-  }
-  
-  this.totalPoints = totalPoints;
-  this.pointsEarned = earnedPoints;
-  this.score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-  this.isPassed = this.score >= this.passingScore;
-  
-  return this.save({ validateBeforeSave: false });
+// Instance methods
+QuizAttempt.prototype.calculateScore = function() {
+  const percentage = (this.correct_answers / this.total_questions) * 100;
+  this.score = parseFloat(percentage.toFixed(2));
+  return this.score;
 };
 
-// Complete the attempt
-quizAttemptSchema.methods.complete = function() {
-  this.status = 'completed';
-  this.completedAt = new Date();
-  return this.save({ validateBeforeSave: false });
+QuizAttempt.prototype.checkPassed = function(passingScore = 70) {
+  this.is_passed = this.score >= passingScore;
+  return this.is_passed;
 };
 
-// Abandon the attempt
-quizAttemptSchema.methods.abandon = function() {
-  this.status = 'abandoned';
-  this.completedAt = new Date();
-  return this.save({ validateBeforeSave: false });
-};
-
-// Check if attempt is expired
-quizAttemptSchema.methods.isExpired = function() {
-  if (this.timeLimit === 0) return false; // No time limit
-  
-  const now = new Date();
-  const timeElapsed = (now - this.startedAt) / 1000; // in seconds
-  
-  return timeElapsed > this.timeLimit;
-};
-
-// Get time remaining
-quizAttemptSchema.methods.getTimeRemaining = function() {
-  if (this.timeLimit === 0) return null; // No time limit
-  
-  const now = new Date();
-  const timeElapsed = (now - this.startedAt) / 1000; // in seconds
-  const remaining = this.timeLimit - timeElapsed;
-  
-  return Math.max(0, remaining);
-};
-
-// Remove sensitive data when converting to JSON
-quizAttemptSchema.methods.toJSON = function() {
-  const attemptObject = this.toObject();
-  return attemptObject;
-};
-
-module.exports = mongoose.model('QuizAttempt', quizAttemptSchema);
+module.exports = QuizAttempt;

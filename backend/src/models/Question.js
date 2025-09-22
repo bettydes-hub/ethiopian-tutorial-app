@@ -1,79 +1,79 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const questionSchema = new mongoose.Schema({
-  question: {
-    type: String,
-    required: [true, 'Question text is required'],
-    trim: true,
-    maxlength: [1000, 'Question cannot exceed 1000 characters']
+const Question = sequelize.define('Question', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
-  type: {
-    type: String,
-    enum: ['multiple_choice', 'true_false'],
-    required: [true, 'Question type is required']
+  quiz_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'quizzes',
+      key: 'id'
+    }
   },
-  options: [{
-    type: String,
-    trim: true,
-    maxlength: [500, 'Option cannot exceed 500 characters']
-  }],
-  correctAnswer: {
-    type: Number,
-    required: [true, 'Correct answer is required'],
-    min: [0, 'Correct answer index cannot be negative']
+  question_text: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
-  points: {
-    type: Number,
-    required: [true, 'Points are required'],
-    min: [1, 'Points must be at least 1'],
-    max: [100, 'Points cannot exceed 100'],
-    default: 1
+  question_type: {
+    type: DataTypes.ENUM('multiple_choice', 'true_false', 'short_answer'),
+    allowNull: false,
+    defaultValue: 'multiple_choice'
+  },
+  options: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  correct_answer: {
+    type: DataTypes.STRING(500),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   explanation: {
-    type: String,
-    trim: true,
-    maxlength: [1000, 'Explanation cannot exceed 1000 characters']
+    type: DataTypes.TEXT
   },
-  quizId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Quiz',
-    required: [true, 'Quiz ID is required']
+  points: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+    validate: {
+      min: 1,
+      max: 10
+    }
   },
   order: {
-    type: Number,
-    required: [true, 'Question order is required'],
-    min: [1, 'Order must be at least 1']
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
-  timestamps: true
+  tableName: 'questions',
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['quiz_id']
+    },
+    {
+      fields: ['question_type']
+    },
+    {
+      fields: ['is_active']
+    },
+    {
+      fields: ['order']
+    }
+  ]
 });
 
-// Index for better query performance
-questionSchema.index({ quizId: 1, order: 1 });
-questionSchema.index({ isActive: 1 });
-
-// Validate correct answer based on question type
-questionSchema.pre('save', function(next) {
-  if (this.type === 'multiple_choice') {
-    if (this.correctAnswer >= this.options.length) {
-      return next(new Error('Correct answer index is out of range for multiple choice question'));
-    }
-  } else if (this.type === 'true_false') {
-    if (this.correctAnswer !== 0 && this.correctAnswer !== 1) {
-      return next(new Error('Correct answer for true/false must be 0 (false) or 1 (true)'));
-    }
-  }
-  next();
-});
-
-// Remove sensitive data when converting to JSON
-questionSchema.methods.toJSON = function() {
-  const questionObject = this.toObject();
-  return questionObject;
-};
-
-module.exports = mongoose.model('Question', questionSchema);
+module.exports = Question;

@@ -1,147 +1,172 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const tutorialSchema = new mongoose.Schema({
+const Tutorial = sequelize.define('Tutorial', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
   title: {
-    type: String,
-    required: [true, 'Tutorial title is required'],
-    trim: true,
-    maxlength: [200, 'Title cannot exceed 200 characters']
+    type: DataTypes.STRING(200),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 200]
+    }
   },
   description: {
-    type: String,
-    required: [true, 'Tutorial description is required'],
-    trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters']
+    type: DataTypes.STRING(500),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 500]
+    }
   },
-  longDescription: {
-    type: String,
-    trim: true,
-    maxlength: [2000, 'Long description cannot exceed 2000 characters']
+  long_description: {
+    type: DataTypes.TEXT,
+    validate: {
+      len: [0, 2000]
+    }
   },
   category: {
-    type: String,
-    required: [true, 'Category is required'],
-    trim: true
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   difficulty: {
-    type: String,
-    enum: ['beginner', 'intermediate', 'advanced'],
-    required: [true, 'Difficulty level is required']
+    type: DataTypes.ENUM('beginner', 'intermediate', 'advanced'),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   duration: {
-    type: String,
-    required: [true, 'Duration is required'],
-    trim: true
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
-  videoUrl: {
-    type: String,
-    default: ''
+  video_url: {
+    type: DataTypes.STRING(500),
+    defaultValue: ''
   },
-  pdfUrl: {
-    type: String,
-    default: ''
+  pdf_url: {
+    type: DataTypes.STRING(500),
+    defaultValue: ''
   },
   thumbnail: {
-    type: String,
-    default: ''
+    type: DataTypes.STRING(500),
+    defaultValue: ''
   },
-  teacherId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Teacher ID is required']
+  teacher_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id'
+    }
   },
   students: {
-    type: Number,
-    default: 0
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   },
   rating: {
-    type: Number,
-    default: 0,
-    min: [0, 'Rating cannot be negative'],
-    max: [5, 'Rating cannot exceed 5']
-  },
-  ratingCount: {
-    type: Number,
-    default: 0
-  },
-  isPublished: {
-    type: Boolean,
-    default: false
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  prerequisites: [{
-    type: String,
-    trim: true
-  }],
-  learningObjectives: [{
-    type: String,
-    trim: true
-  }],
-  resources: [{
-    title: String,
-    url: String,
-    type: {
-      type: String,
-      enum: ['pdf', 'video', 'link', 'document']
+    type: DataTypes.DECIMAL(3, 2),
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 5
     }
-  }]
+  },
+  rating_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  is_published: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  tags: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: []
+  },
+  prerequisites: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: []
+  },
+  learning_objectives: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: []
+  }
 }, {
-  timestamps: true
+  tableName: 'tutorials',
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['title', 'description', 'long_description'],
+      type: 'GIN'
+    },
+    {
+      fields: ['category']
+    },
+    {
+      fields: ['difficulty']
+    },
+    {
+      fields: ['teacher_id']
+    },
+    {
+      fields: ['is_published']
+    },
+    {
+      fields: ['rating']
+    }
+  ]
 });
 
-// Index for better query performance
-tutorialSchema.index({ title: 'text', description: 'text', longDescription: 'text' });
-tutorialSchema.index({ category: 1 });
-tutorialSchema.index({ difficulty: 1 });
-tutorialSchema.index({ teacherId: 1 });
-tutorialSchema.index({ isPublished: 1 });
-tutorialSchema.index({ rating: -1 });
-tutorialSchema.index({ createdAt: -1 });
+// Virtual for average rating
+Tutorial.prototype.getAverageRating = function() {
+  return this.rating_count > 0 ? parseFloat(this.rating).toFixed(1) : 0;
+};
 
-// Virtual for average rating calculation
-tutorialSchema.virtual('averageRating').get(function() {
-  return this.ratingCount > 0 ? (this.rating / this.ratingCount).toFixed(1) : 0;
-});
-
-// Update student count
-tutorialSchema.methods.updateStudentCount = async function() {
-  const Progress = mongoose.model('Progress');
-  const count = await Progress.countDocuments({ 
-    tutorialId: this._id, 
-    status: { $in: ['in_progress', 'completed'] } 
+// Instance methods
+Tutorial.prototype.updateStudentCount = async function() {
+  const Progress = require('./Progress');
+  const count = await Progress.count({
+    where: {
+      tutorial_id: this.id,
+      status: ['in_progress', 'completed']
+    }
   });
   this.students = count;
-  return this.save({ validateBeforeSave: false });
+  return this.save();
 };
 
-// Add rating
-tutorialSchema.methods.addRating = function(newRating) {
-  this.rating += newRating;
-  this.ratingCount += 1;
-  return this.save({ validateBeforeSave: false });
+Tutorial.prototype.addRating = function(newRating) {
+  this.rating = parseFloat(this.rating) + newRating;
+  this.rating_count += 1;
+  return this.save();
 };
 
-// Update rating
-tutorialSchema.methods.updateRating = function(oldRating, newRating) {
-  this.rating = this.rating - oldRating + newRating;
-  return this.save({ validateBeforeSave: false });
+Tutorial.prototype.updateRating = function(oldRating, newRating) {
+  this.rating = parseFloat(this.rating) - oldRating + newRating;
+  return this.save();
 };
 
-// Remove rating
-tutorialSchema.methods.removeRating = function(rating) {
-  this.rating -= rating;
-  this.ratingCount -= 1;
-  return this.save({ validateBeforeSave: false });
+Tutorial.prototype.removeRating = function(rating) {
+  this.rating = parseFloat(this.rating) - rating;
+  this.rating_count -= 1;
+  return this.save();
 };
 
-// Remove sensitive data when converting to JSON
-tutorialSchema.methods.toJSON = function() {
-  const tutorialObject = this.toObject();
-  tutorialObject.averageRating = this.averageRating;
-  return tutorialObject;
+Tutorial.prototype.toJSON = function() {
+  const values = Object.assign({}, this.get());
+  values.average_rating = this.getAverageRating();
+  return values;
 };
 
-module.exports = mongoose.model('Tutorial', tutorialSchema);
+module.exports = Tutorial;
