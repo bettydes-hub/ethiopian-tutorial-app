@@ -160,9 +160,9 @@ app.use((error, req, res, next) => {
     });
   }
   
-  // Handle MongoDB duplicate key error
-  if (error.code === 11000) {
-    const field = Object.keys(error.keyValue)[0];
+  // Handle PostgreSQL unique constraint error
+  if (error.name === 'SequelizeUniqueConstraintError') {
+    const field = error.errors[0].path;
     return res.status(400).json({
       success: false,
       error: `${field} already exists`,
@@ -187,11 +187,24 @@ app.use((error, req, res, next) => {
     });
   }
   
-  // Handle MongoDB cast error
-  if (error.name === 'CastError') {
+  // Handle Sequelize validation error
+  if (error.name === 'SequelizeValidationError') {
+    const errors = error.errors.map(err => ({
+      field: err.path,
+      message: err.message
+    }));
     return res.status(400).json({
       success: false,
-      error: 'Invalid ID format',
+      error: 'Validation failed',
+      details: errors
+    });
+  }
+  
+  // Handle Sequelize foreign key constraint error
+  if (error.name === 'SequelizeForeignKeyConstraintError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid reference',
       details: error.message
     });
   }

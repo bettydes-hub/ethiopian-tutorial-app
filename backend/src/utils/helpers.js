@@ -54,10 +54,9 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
-// Validate MongoDB ObjectId
-const isValidObjectId = (id) => {
-  const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-  return objectIdRegex.test(id);
+// Validate PostgreSQL integer ID
+const isValidId = (id) => {
+  return Number.isInteger(Number(id)) && Number(id) > 0;
 };
 
 // Generate random string
@@ -229,7 +228,7 @@ module.exports = {
   calculatePagination,
   sanitizeString,
   isValidEmail,
-  isValidObjectId,
+  isValidId,
   generateRandomString,
   formatDuration,
   formatFileSize,

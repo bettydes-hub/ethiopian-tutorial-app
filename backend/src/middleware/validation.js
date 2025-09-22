@@ -175,8 +175,8 @@ const validateQuizCreation = [
     .isLength({ max: 500 })
     .withMessage('Description cannot exceed 500 characters'),
   body('tutorialId')
-    .isMongoId()
-    .withMessage('Tutorial ID must be a valid MongoDB ObjectId'),
+    .isInt({ min: 1 })
+    .withMessage('Tutorial ID must be a valid integer'),
   body('timeLimit')
     .optional()
     .isInt({ min: 0 })
@@ -253,8 +253,8 @@ const validateQuestionCreation = [
     .isInt({ min: 1, max: 100 })
     .withMessage('Points must be between 1 and 100'),
   body('quizId')
-    .isMongoId()
-    .withMessage('Quiz ID must be a valid MongoDB ObjectId'),
+    .isInt({ min: 1 })
+    .withMessage('Quiz ID must be a valid integer'),
   handleValidationErrors
 ];
 
@@ -284,8 +284,8 @@ const validateProgressUpdate = [
     .isIn(['not_started', 'in_progress', 'completed'])
     .withMessage('Status must be not_started, in_progress, or completed'),
   body('tutorialId')
-    .isMongoId()
-    .withMessage('Tutorial ID must be a valid MongoDB ObjectId'),
+    .isInt({ min: 1 })
+    .withMessage('Tutorial ID must be a valid integer'),
   handleValidationErrors
 ];
 
@@ -304,8 +304,8 @@ const validateQuizAttempt = [
 // Parameter validation
 const validateObjectId = (paramName) => [
   param(paramName)
-    .isMongoId()
-    .withMessage(`${paramName} must be a valid MongoDB ObjectId`),
+    .isInt({ min: 1 })
+    .withMessage(`${paramName} must be a valid integer`),
   handleValidationErrors
 ];
 

@@ -1,6 +1,6 @@
 # Ethiopian Tutorial App - Backend API
 
-A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, Express, and MongoDB.
+A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, Express, and PostgreSQL.
 
 ## Features
 
@@ -20,7 +20,7 @@ A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, 
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: MongoDB with Mongoose ODM
+- **Database**: PostgreSQL with Sequelize ORM
 - **Authentication**: JWT (JSON Web Tokens)
 - **File Upload**: Multer
 - **Email**: Nodemailer
@@ -113,7 +113,7 @@ A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, 
    ```env
    NODE_ENV=development
    PORT=5000
-   DATABASE_URL=mongodb://localhost:27017/ethiopian-tutorial-app
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/ethiopian-tutorial-app
    JWT_SECRET=your_super_secret_jwt_key_here
    JWT_REFRESH_SECRET=your_super_secret_refresh_key_here
    JWT_EXPIRES_IN=24h
@@ -123,8 +123,8 @@ A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, 
    ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
    ```
 
-4. **Start MongoDB**
-   Make sure MongoDB is running on your system.
+4. **Start PostgreSQL**
+   Make sure PostgreSQL is running on your system.
 
 5. **Run the application**
    ```bash
@@ -138,7 +138,7 @@ A comprehensive backend API for the Ethiopian Tutorial App, built with Node.js, 
 ## Database Setup
 
 The application will automatically:
-- Connect to MongoDB
+- Connect to PostgreSQL
 - Create necessary indexes
 - Seed initial data (categories and admin user)
 
@@ -219,7 +219,7 @@ npm run test:watch
 |----------|-------------|---------|
 | `NODE_ENV` | Environment | `development` |
 | `PORT` | Server port | `5000` |
-| `DATABASE_URL` | MongoDB connection string | `mongodb://localhost:27017/ethiopian-tutorial-app` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@localhost:5432/ethiopian-tutorial-app` |
 | `JWT_SECRET` | JWT secret key | Required |
 | `JWT_REFRESH_SECRET` | JWT refresh secret key | Required |
 | `JWT_EXPIRES_IN` | JWT expiration time | `24h` |
