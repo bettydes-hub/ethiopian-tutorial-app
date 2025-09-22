@@ -74,11 +74,25 @@ export const quizService = {
     }
   },
 
+  // Toggle publish status
+  togglePublishStatus: async (id) => {
+    try {
+      const response = await quizApi.patch(`/${id}/publish`);
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling quiz publish status:', error);
+      throw error;
+    }
+  },
+
   // Get quizzes by tutorial
   getQuizzesByTutorial: async (tutorialId, params = {}) => {
     try {
       const response = await quizApi.get(`/tutorial/${tutorialId}`, { params });
-      return response.data.data || response.data.quizzes || response.data;
+      console.log('Raw quiz API response:', response.data);
+      const quizzes = response.data.data?.quizzes || response.data.quizzes || response.data;
+      console.log('Extracted quizzes:', quizzes);
+      return quizzes;
     } catch (error) {
       console.error('Error fetching quizzes by tutorial:', error);
       throw error;
@@ -147,17 +161,6 @@ export const quizService = {
       return response.data;
     } catch (error) {
       console.error('Error starting quiz attempt:', error);
-      throw error;
-    }
-  },
-
-  // Toggle publish status
-  togglePublishStatus: async (quizId) => {
-    try {
-      const response = await quizApi.patch(`/${quizId}/publish`);
-      return response.data;
-    } catch (error) {
-      console.error('Error toggling publish status:', error);
       throw error;
     }
   },

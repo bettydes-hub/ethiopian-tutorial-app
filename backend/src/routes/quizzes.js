@@ -14,6 +14,7 @@ router.use(authenticateToken);
 
 // Public authenticated routes
 router.get('/', validatePagination, quizController.getAllQuizzes);
+router.get('/tutorial/:tutorialId', validateObjectId('tutorialId'), quizController.getQuizzesByTutorial);
 router.get('/:id', validateObjectId('id'), quizController.getQuizById);
 router.get('/:id/attempts', validateObjectId('id'), validatePagination, quizController.getQuizAttempts);
 router.get('/user/:userId/attempts', validateObjectId('userId'), validatePagination, quizController.getUserQuizAttempts);

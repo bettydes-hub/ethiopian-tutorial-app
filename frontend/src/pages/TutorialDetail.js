@@ -25,20 +25,30 @@ const TutorialDetail = () => {
 
   const fetchTutorial = useCallback(async () => {
     try {
-      const tutorialData = await tutorialService.getTutorialById(parseInt(id));
+      const tutorialData = await tutorialService.getTutorialById(id);
+      console.log('Tutorial data received:', tutorialData);
+      console.log('Video URL:', tutorialData?.video_url);
+      console.log('PDF URL:', tutorialData?.pdf_url);
+      console.log('Thumbnail:', tutorialData?.thumbnail);
       setTutorial(tutorialData);
       
       // Fetch quizzes for this tutorial
-      const quizzesData = await quizService.getQuizzesByTutorial(parseInt(id));
+      const quizzesData = await quizService.getQuizzesByTutorial(id);
+      console.log('Quizzes data received:', quizzesData);
+      console.log('Quizzes array length:', quizzesData?.length || 0);
       setQuizzes(quizzesData);
       
       // Fetch user progress for this tutorial
       if (user?.id) {
-        const progressData = await tutorialService.getUserProgress(user.id);
-        const userProgress = progressData.find(p => p.tutorialId === parseInt(id));
-        if (userProgress) {
-          setProgress(userProgress.progress);
-          setCompleted(userProgress.status === 'completed');
+        try {
+          const userProgress = await tutorialService.getTutorialProgress(id);
+          if (userProgress) {
+            setProgress(userProgress.progress_percentage || 0);
+            setCompleted(userProgress.status === 'completed');
+          }
+        } catch (error) {
+          // If no progress exists, that's fine - user hasn't started yet
+          console.log('No progress found for tutorial:', id);
         }
       }
     } catch (error) {
@@ -73,7 +83,7 @@ const TutorialDetail = () => {
 
   const handleMarkComplete = async () => {
     try {
-      await tutorialService.updateProgress(parseInt(id), { progress: 100, status: 'completed' });
+      await tutorialService.updateProgress(id, { progress: 100, status: 'completed' });
       setCompleted(true);
       setProgress(100);
       message.success('Tutorial marked as complete!');
@@ -191,34 +201,64 @@ const TutorialDetail = () => {
             onClick={!videoPlaying ? handleStartVideo : undefined}
             >
               {videoPlaying ? (
-                <div style={{ textAlign: 'center', color: 'white' }}>
-                  <div style={{ fontSize: '18px', marginBottom: 16 }}>
-                    🎥 Video Player (Simulated)
-                  </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>
-                    In a real app, this would be an actual video player
-                  </div>
-                  <div style={{ marginTop: 20 }}>
-                    <Button 
-                      type="primary" 
-                      onClick={() => setVideoPlaying(false)}
-                      style={{ marginRight: 8 }}
+                tutorial?.video_url ? (
+                  <div style={{ width: '100%', height: '100%' }}>
+                    <video 
+                      controls 
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      onEnded={() => setVideoPlaying(false)}
                     >
-                      Pause Video
-                    </Button>
-                    <Button 
-                      type="default" 
-                      onClick={handleMarkComplete}
-                      disabled={completed}
-                    >
-                      Mark Complete
-                    </Button>
+                      <source src={tutorial.video_url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                    <div style={{ position: 'absolute', bottom: 20, right: 20 }}>
+                      <Button 
+                        type="default" 
+                        onClick={handleMarkComplete}
+                        disabled={completed}
+                        style={{ background: 'rgba(0,0,0,0.7)', color: 'white', border: '1px solid white' }}
+                      >
+                        Mark Complete
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: 'white' }}>
+                    <div style={{ fontSize: '18px', marginBottom: 16 }}>
+                      🎥 Video Player (Simulated)
+                    </div>
+                    <div style={{ fontSize: '14px', opacity: 0.8 }}>
+                      No video URL available for this tutorial
+                    </div>
+                    <div style={{ marginTop: 20 }}>
+                      <Button 
+                        type="primary" 
+                        onClick={() => setVideoPlaying(false)}
+                        style={{ marginRight: 8 }}
+                      >
+                        Close
+                      </Button>
+                      <Button 
+                        type="default" 
+                        onClick={handleMarkComplete}
+                        disabled={completed}
+                      >
+                        Mark Complete
+                      </Button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div style={{ textAlign: 'center', color: 'white' }}>
                   <PlayCircleOutlined style={{ fontSize: 64, marginBottom: 16 }} />
-                  <div style={{ fontSize: '18px' }}>Click to Start Video</div>
+                  <div style={{ fontSize: '18px' }}>
+                    {tutorial?.video_url ? 'Click to Start Video' : 'No Video Available'}
+                  </div>
+                  {tutorial?.video_url && (
+                    <div style={{ fontSize: '14px', opacity: 0.8, marginTop: 8 }}>
+                      Video: {tutorial.video_url.split('/').pop()}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

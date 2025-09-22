@@ -99,7 +99,7 @@ const validateTutorialCreation = [
     .notEmpty()
     .withMessage('Category is required'),
   body('difficulty')
-    .isIn(['beginner', 'intermediate', 'advanced'])
+    .isIn(['beginner', 'intermediate', 'advanced', 'Beginner', 'Intermediate', 'Advanced'])
     .withMessage('Difficulty must be beginner, intermediate, or advanced'),
   body('duration')
     .trim()
@@ -280,15 +280,25 @@ const validateCategoryCreation = [
 // Progress validation rules
 const validateProgressUpdate = [
   body('progress')
+    .optional()
     .isInt({ min: 0, max: 100 })
     .withMessage('Progress must be between 0 and 100'),
   body('status')
     .optional()
     .isIn(['not_started', 'in_progress', 'completed'])
     .withMessage('Status must be not_started, in_progress, or completed'),
-  body('tutorialId')
-    .isUUID()
-    .withMessage('Tutorial ID must be a valid UUID'),
+  body('timeSpent')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Time spent must be a non-negative integer'),
+  body('lastPosition')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Last position must be a non-negative integer'),
+  body('notes')
+    .optional()
+    .isString()
+    .withMessage('Notes must be a string'),
   handleValidationErrors
 ];
 

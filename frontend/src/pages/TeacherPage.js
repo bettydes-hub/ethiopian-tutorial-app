@@ -43,6 +43,8 @@ const TeacherPage = () => {
         tutorialService.getAllTutorials({ teacherId: user?.id }),
         quizService.getAllQuizzes({ teacherId: user?.id })
       ]);
+      console.log('Tutorials loaded:', tutorialsData);
+      console.log('Quizzes loaded:', quizzesData);
       setTutorials(tutorialsData);
       setQuizzes(quizzesData);
     } catch (error) {
@@ -161,6 +163,22 @@ const TeacherPage = () => {
   const handleCreateQuiz = () => {
     setEditingQuiz(null);
     quizForm.resetFields();
+    // Initialize with default values
+    setTimeout(() => {
+      quizForm.setFieldsValue({
+        title: '',
+        description: '',
+        timeLimit: 30,
+        maxAttempts: 3,
+        questions: [{
+          question: '',
+          type: 'multiple_choice',
+          points: 1,
+          options: ['', ''],
+          correctAnswer: 0
+        }]
+      });
+    }, 100);
     setIsQuizModalVisible(true);
   };
 
@@ -172,37 +190,93 @@ const TeacherPage = () => {
 
   const handleTutorialSubmit = async (values) => {
     try {
-      console.log('Tutorial form values:', values);
-      console.log('Tutorial data being sent:', values);
+      console.log('=== TUTORIAL CREATION DEBUG ===');
+      console.log('Form values from Ant Design:', values);
+      console.log('Uploaded files state:', uploadedFiles);
+      console.log('Form field values:', {
+        videoUrl: tutorialForm.getFieldValue('videoUrl'),
+        pdfUrl: tutorialForm.getFieldValue('pdfUrl'),
+        thumbnail: tutorialForm.getFieldValue('thumbnail')
+      });
+      
+      // Ensure we have the uploaded file URLs
+      const tutorialData = {
+        ...values,
+        videoUrl: values.videoUrl || uploadedFiles.video,
+        pdfUrl: values.pdfUrl || uploadedFiles.pdf,
+        thumbnail: values.thumbnail || uploadedFiles.thumbnail
+      };
+      
+      console.log('Final tutorial data being sent:', tutorialData);
       
       if (editingTutorial) {
-        await tutorialService.updateTutorial(editingTutorial.id, values);
+        await tutorialService.updateTutorial(editingTutorial.id, tutorialData);
         message.success('Tutorial updated successfully');
       } else {
-        await tutorialService.createTutorial(values);
+        await tutorialService.createTutorial(tutorialData);
         message.success('Tutorial created successfully');
       }
       setIsTutorialModalVisible(false);
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Tutorial creation error:', error);
-      message.error('Failed to save tutorial');
+      console.error('Error response:', error.response?.data);
+      message.error(`Failed to save tutorial: ${error.response?.data?.error || error.message}`);
     }
   };
 
   const handleQuizSubmit = async (values) => {
     try {
+      console.log('Quiz form values:', values);
+      console.log('Questions:', values.questions);
+      values.questions?.forEach((q, i) => {
+        console.log(`Question ${i}:`, q);
+        console.log(`  correctAnswer:`, q.correctAnswer, typeof q.correctAnswer);
+      });
+      
+      // Process questions to ensure options are properly formatted
+      const processedQuestions = values.questions?.map(question => {
+        const options = Array.isArray(question.options) ? question.options : [];
+        const correctAnswer = Math.max(0, parseInt(question.correctAnswer) || 0);
+        
+        // Ensure correct answer index is within bounds
+        const validCorrectAnswer = Math.min(correctAnswer, options.length - 1);
+        
+        return {
+          ...question,
+          options,
+          correctAnswer: validCorrectAnswer,
+          points: parseInt(question.points) || 1
+        };
+      }) || [];
+      
+      const quizData = {
+        title: values.title,
+        description: values.description,
+        tutorialId: values.tutorialId,
+        timeLimit: parseInt(values.timeLimit),
+        maxAttempts: parseInt(values.maxAttempts),
+        questions: processedQuestions,
+        teacherId: user?.id
+      };
+      
+      console.log('Processed quiz data:', quizData);
+      console.log('Selected tutorialId:', values.tutorialId);
+      console.log('Available tutorials:', tutorials.map(t => ({ id: t.id, title: t.title })));
+      
       if (editingQuiz) {
-        await quizService.updateQuiz(editingQuiz.id, values);
+        await quizService.updateQuiz(editingQuiz.id, quizData);
         message.success('Quiz updated successfully');
       } else {
-        await quizService.createQuiz({ ...values, teacherId: user?.id });
+        await quizService.createQuiz(quizData);
         message.success('Quiz created successfully');
       }
       setIsQuizModalVisible(false);
       fetchData(); // Refresh data
     } catch (error) {
-      message.error('Failed to save quiz');
+      console.error('Quiz creation error:', error);
+      console.error('Error response:', error.response?.data);
+      message.error(`Failed to save quiz: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -223,6 +297,16 @@ const TeacherPage = () => {
       fetchData(); // Refresh data
     } catch (error) {
       message.error('Failed to delete quiz');
+    }
+  };
+
+  const handleToggleQuizPublish = async (quiz) => {
+    try {
+      await quizService.togglePublishStatus(quiz.id);
+      message.success(`Quiz ${quiz.is_published ? 'unpublished' : 'published'} successfully`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error(`Failed to ${quiz.is_published ? 'unpublish' : 'publish'} quiz`);
     }
   };
 
@@ -319,6 +403,16 @@ const TeacherPage = () => {
       render: (score) => score ? `${score}%` : 'N/A',
     },
     {
+      title: 'Status',
+      dataIndex: 'is_published',
+      key: 'is_published',
+      render: (isPublished) => (
+        <Tag color={isPublished ? 'green' : 'orange'}>
+          {isPublished ? 'PUBLISHED' : 'DRAFT'}
+        </Tag>
+      ),
+    },
+    {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => (
@@ -328,6 +422,14 @@ const TeacherPage = () => {
           </Button>
           <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditQuiz(record)}>
             Edit
+          </Button>
+          <Button 
+            type="link" 
+            size="small"
+            onClick={() => handleToggleQuizPublish(record)}
+            style={{ color: record.is_published ? '#ff4d4f' : '#52c41a' }}
+          >
+            {record.is_published ? 'Unpublish' : 'Publish'}
           </Button>
           <Button type="link" danger icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteQuiz(record.id)}>
             Delete
@@ -661,6 +763,35 @@ const TeacherPage = () => {
             </Select>
           </Form.Item>
 
+          <Form.Item
+            name="description"
+            label="Quiz Description"
+            rules={[{ required: true, message: 'Please input quiz description!' }]}
+          >
+            <Input.TextArea rows={3} placeholder="Enter quiz description" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="timeLimit"
+                label="Time Limit (minutes)"
+                rules={[{ required: true, message: 'Please input time limit!' }]}
+              >
+                <Input type="number" placeholder="30" min={1} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="maxAttempts"
+                label="Max Attempts"
+                rules={[{ required: true, message: 'Please input max attempts!' }]}
+              >
+                <Input type="number" placeholder="3" min={1} />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Divider>Quiz Questions</Divider>
           
           <Form.List name="questions">
@@ -707,15 +838,20 @@ const TeacherPage = () => {
                                 {...optionRestField}
                                 name={[optionName]}
                                 style={{ flex: 1, marginRight: 8 }}
+                                rules={[{ required: true, message: 'Option is required!' }]}
                               >
-                                <Input placeholder="Option" />
+                                <Input placeholder={`Option ${optionName + 1}`} />
                               </Form.Item>
+                              {optionFields.length > 2 && (
                               <Button onClick={() => removeOption(optionName)}>Remove</Button>
+                              )}
                             </div>
                           ))}
+                          {optionFields.length < 6 && (
                           <Button type="dashed" onClick={() => addOption()} block>
                             Add Option
                           </Button>
+                          )}
                         </>
                       )}
                     </Form.List>
@@ -724,9 +860,21 @@ const TeacherPage = () => {
                       {...restField}
                       name={[name, 'correctAnswer']}
                       label="Correct Answer Index"
-                      rules={[{ required: true, message: 'Please input correct answer index!' }]}
+                      initialValue={0}
+                      rules={[
+                        { required: true, message: 'Please input correct answer index!' }
+                      ]}
                     >
-                      <Input type="number" placeholder="0, 1, 2, etc." />
+                      <Input 
+                        type="number" 
+                        placeholder="0, 1, 2, etc." 
+                        min={0}
+                        step={1}
+                        defaultValue={0}
+                      />
+                      <div style={{ fontSize: '0.85em', color: '#888', marginTop: '4px' }}>
+                        Enter the index of the correct option (0 for first option, 1 for second, etc.)
+                      </div>
                     </Form.Item>
 
                     <Button type="link" danger onClick={() => remove(name)}>
@@ -747,6 +895,23 @@ const TeacherPage = () => {
             </Button>
             <Button onClick={() => setIsQuizModalVisible(false)}>
               Cancel
+            </Button>
+            <Button 
+              type="default" 
+              onClick={() => {
+                const values = quizForm.getFieldsValue();
+                console.log('Current form values:', values);
+                console.log('Questions:', values.questions);
+                if (values.questions) {
+                  values.questions.forEach((q, i) => {
+                    console.log(`Question ${i}:`, q);
+                    console.log(`  correctAnswer:`, q.correctAnswer, typeof q.correctAnswer);
+                  });
+                }
+              }}
+              style={{ marginLeft: 8 }}
+            >
+              Debug Form
             </Button>
           </Form.Item>
         </Form>

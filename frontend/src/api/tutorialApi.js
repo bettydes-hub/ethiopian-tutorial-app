@@ -34,7 +34,10 @@ export const tutorialService = {
   getTutorialById: async (id) => {
     try {
       const response = await tutorialApi.get(`/${id}`);
-      return response.data.data || response.data.tutorial || response.data;
+      console.log('Raw API response:', response.data);
+      const tutorial = response.data.data?.tutorial || response.data.tutorial || response.data;
+      console.log('Extracted tutorial:', tutorial);
+      return tutorial;
     } catch (error) {
       console.error('Error fetching tutorial:', error);
       throw error;
@@ -88,10 +91,21 @@ export const tutorialService = {
   // Get user's progress
   getUserProgress: async (userId) => {
     try {
-      const response = await tutorialApi.get(`/user/${userId}/progress`);
+      const response = await tutorialApi.get('/user/progress');
       return response.data.data || response.data.progress || response.data;
     } catch (error) {
       console.error('Error fetching user progress:', error);
+      throw error;
+    }
+  },
+
+  // Get user's progress for a specific tutorial
+  getTutorialProgress: async (tutorialId) => {
+    try {
+      const response = await tutorialApi.get(`/${tutorialId}/progress`);
+      return response.data.data || response.data.progress || response.data;
+    } catch (error) {
+      console.error('Error fetching tutorial progress:', error);
       throw error;
     }
   },

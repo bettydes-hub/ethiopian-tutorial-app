@@ -28,9 +28,9 @@ router.patch('/:id/publish', validateObjectId('id'), tutorialController.togglePu
 router.post('/:id/rating', validateObjectId('id'), tutorialController.addRating);
 
 // Student routes
+router.get('/user/progress', validatePagination, tutorialController.getAllUserProgress);
 router.post('/:id/progress', validateObjectId('id'), validateProgressUpdate, tutorialController.updateProgress);
 router.get('/:id/progress', validateObjectId('id'), tutorialController.getUserProgress);
-router.get('/user/progress', validatePagination, tutorialController.getAllUserProgress);
 
 // File upload routes
 router.post('/upload/video', authenticateToken, requireTeacher, videoUpload.single('video'), cleanupUploadedFiles, tutorialController.uploadVideo);

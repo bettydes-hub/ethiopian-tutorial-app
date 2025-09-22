@@ -42,7 +42,7 @@ export const generateTutorialPDF = (tutorial) => {
       <div class="objectives">
         <h3>Learning Objectives</h3>
         <ul>
-          <li>Master the fundamental concepts of ${tutorial.category.toLowerCase()}</li>
+          <li>Master the fundamental concepts of ${tutorial.category?.toLowerCase() || 'Ethiopian Culture'}</li>
           <li>Understand the cultural significance and context</li>
           <li>Practice with hands-on exercises and examples</li>
           <li>Apply knowledge in real-world scenarios</li>

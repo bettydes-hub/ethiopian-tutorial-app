@@ -4,6 +4,38 @@ const QuizAttempt = require('../models/QuizAttempt');
 const Progress = require('../models/Progress');
 const { formatResponse, formatPaginatedResponse, calculatePagination } = require('../utils/helpers');
 
+// Get quizzes by tutorial
+const getQuizzesByTutorial = async (req, res) => {
+  try {
+    const { tutorialId } = req.params;
+    
+    const quizzes = await Quiz.findAll({
+      where: {
+        tutorial_id: tutorialId,
+        is_published: true
+      },
+      include: [
+        {
+          model: Question,
+          as: 'questions',
+          where: { is_active: true },
+          required: false
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+    
+    res.json(
+      formatResponse(true, { quizzes }, 'Quizzes retrieved successfully')
+    );
+  } catch (error) {
+    console.error('Get quizzes by tutorial error:', error);
+    res.status(500).json(
+      formatResponse(false, null, '', 'Failed to retrieve quizzes')
+    );
+  }
+};
+
 // Get all quizzes
 const getAllQuizzes = async (req, res) => {
   try {
@@ -78,9 +110,20 @@ const getQuizById = async (req, res) => {
     const { id } = req.params;
     const includeAnswers = req.query.includeAnswers === 'true';
     
-    const quiz = await Quiz.findByPk(id)
-      .populate('tutorialId', 'title description category')
-      .populate('teacherId', 'name email');
+    const quiz = await Quiz.findByPk(id, {
+      include: [
+        {
+          model: require('../models/Tutorial'),
+          as: 'tutorial',
+          attributes: ['id', 'title', 'description', 'category']
+        },
+        {
+          model: require('../models/User'),
+          as: 'teacher',
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
     
     if (!quiz) {
       return res.status(404).json(
@@ -89,17 +132,20 @@ const getQuizById = async (req, res) => {
     }
     
     // Get questions
-    const questions = await quiz.getOrderedQuestions();
+    const questions = await Question.findAll({
+      where: { quiz_id: id, is_active: true },
+      order: [['order', 'ASC']]
+    });
     
     // Remove correct answers if not requested
     if (!includeAnswers) {
       questions.forEach(question => {
-        delete question.correctAnswer;
+        delete question.correct_answer;
       });
     }
     
     const quizData = {
-      ...quiz.toObject(),
+      ...quiz.toJSON(),
       questions
     };
     
@@ -133,9 +179,20 @@ const createQuiz = async (req, res) => {
     
     const teacherId = req.user.id;
     
+    console.log('Quiz creation request:', {
+      title,
+      description,
+      tutorialId,
+      teacherId,
+      timeLimit,
+      maxAttempts
+    });
+    
     // Verify tutorial exists and user has access
     const Tutorial = require('../models/Tutorial');
     const tutorial = await Tutorial.findByPk(tutorialId);
+    console.log('Tutorial found:', tutorial ? tutorial.title : 'NOT FOUND');
+    
     if (!tutorial) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Tutorial not found')
@@ -149,7 +206,7 @@ const createQuiz = async (req, res) => {
     }
     
     // Create quiz
-    const quiz = new Quiz({
+    const quiz = await Quiz.create({
       title,
       description,
       tutorial_id: tutorialId,
@@ -160,10 +217,9 @@ const createQuiz = async (req, res) => {
       show_explanations: showExplanations !== false,
       randomize_questions: randomizeQuestions || false,
       randomize_options: randomizeOptions || false,
-      teacher_id: teacherId
+      teacher_id: teacherId,
+      total_questions: questions ? questions.length : 0
     });
-    
-    await quiz.save();
     
     // Create questions
     const createdQuestions = [];
@@ -179,14 +235,12 @@ const createQuiz = async (req, res) => {
         order: i + 1
       };
       
-      const question = new Question(questionData);
-      await question.save();
+      const question = await Question.create(questionData);
       createdQuestions.push(question.id);
     }
     
-    // Update quiz with question IDs
-    quiz.questions = createdQuestions;
-    await quiz.save();
+    // Update quiz with question count
+    await quiz.update({ total_questions: createdQuestions.length });
     
     res.status(201).json(
       formatResponse(true, { quiz }, 'Quiz created successfully')
@@ -242,26 +296,23 @@ const updateQuiz = async (req, res) => {
     // Update questions if provided
     if (updateData.questions) {
       // Delete existing questions
-      await Question.destroy({ where: { quizId: id } });
+      await Question.destroy({ where: { quiz_id: id } });
       
       // Create new questions
       const createdQuestions = [];
       for (let i = 0; i < updateData.questions.length; i++) {
         const questionData = {
           ...updateData.questions[i],
-          quizId: id,
+          quiz_id: id,
           order: i + 1
         };
         
-        const question = new Question(questionData);
-        await question.save();
-        createdQuestions.push(question._id);
+        const question = await Question.create(questionData);
+        createdQuestions.push(question.id);
       }
       
-      quiz.questions = createdQuestions;
+      await quiz.update({ total_questions: createdQuestions.length });
     }
-    
-    await quiz.save();
     
     res.json(
       formatResponse(true, { quiz }, 'Quiz updated successfully')
@@ -294,8 +345,8 @@ const deleteQuiz = async (req, res) => {
     }
     
     // Delete related questions and attempts
-    await Question.destroy({ where: { quizId: id } });
-    await QuizAttempt.destroy({ where: { quizId: id } });
+    await Question.destroy({ where: { quiz_id: id } });
+    await QuizAttempt.destroy({ where: { quiz_id: id } });
     
     await Quiz.destroy({ where: { id } });
     
@@ -473,7 +524,7 @@ const submitQuizAttempt = async (req, res) => {
       // Update progress with quiz attempt results
       progress.quiz_attempts = progress.quiz_attempts || [];
       progress.quiz_attempts.push({
-        quizId: quiz.id,
+        quiz_id: quiz.id,
         attemptId: attempt.id,
         score: attempt.score,
         isPassed: attempt.is_passed,
@@ -505,7 +556,7 @@ const getQuizAttempts = async (req, res) => {
     const pagination = calculatePagination(page, limit);
     
     const { count: total, rows: attempts } = await QuizAttempt.findAndCountAll({
-      where: { quizId: id },
+      where: { quiz_id: id },
       include: [
         {
           model: require('../models/User'),
@@ -540,9 +591,9 @@ const getUserQuizAttempts = async (req, res) => {
     const pagination = calculatePagination(page, limit);
     
     // Build query
-    const query = { userId };
+    const query = { user_id: userId };
     if (quizId) {
-      query.quizId = quizId;
+      query.quiz_id = quizId;
     }
     
     const { count: total, rows: attempts } = await QuizAttempt.findAndCountAll({
@@ -614,6 +665,7 @@ const togglePublishStatus = async (req, res) => {
 };
 
 module.exports = {
+  getQuizzesByTutorial,
   getAllQuizzes,
   getQuizById,
   createQuiz,

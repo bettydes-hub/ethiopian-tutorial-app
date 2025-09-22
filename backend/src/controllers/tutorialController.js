@@ -117,8 +117,10 @@ const getTutorialById = async (req, res) => {
 // Create tutorial
 const createTutorial = async (req, res) => {
   try {
-    console.log('Create tutorial request body:', req.body);
+    console.log('=== BACKEND TUTORIAL CREATION DEBUG ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('User from token:', req.user);
+    console.log('Request headers:', req.headers);
     
     const {
       title,
@@ -136,6 +138,24 @@ const createTutorial = async (req, res) => {
       resources
     } = req.body;
     
+    console.log('Extracted fields:', {
+      title,
+      description,
+      longDescription,
+      category,
+      difficulty,
+      duration,
+      videoUrl,
+      pdfUrl,
+      thumbnail,
+      hasTitle: !!title,
+      hasDescription: !!description,
+      hasCategory: !!category,
+      hasVideoUrl: !!videoUrl,
+      hasPdfUrl: !!pdfUrl,
+      hasThumbnail: !!thumbnail
+    });
+    
     const teacherId = req.user.id;
     
     // Verify category exists
@@ -151,7 +171,7 @@ const createTutorial = async (req, res) => {
       description,
       long_description: longDescription,
       category,
-      difficulty,
+      difficulty: difficulty.toLowerCase(), // Convert to lowercase for database enum
       duration,
       video_url: videoUrl,
       pdf_url: pdfUrl,
@@ -350,7 +370,7 @@ const updateProgress = async (req, res) => {
 // Get user progress for tutorial
 const getUserProgress = async (req, res) => {
   try {
-    const { tutorialId } = req.params;
+    const { id: tutorialId } = req.params;
     const userId = req.user.id;
     
     const progress = await Progress.findOne({
