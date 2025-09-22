@@ -190,8 +190,28 @@ const generateFileUrl = (req, file) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const relativePath = file.path.replace(/\\/g, '/');
   const uploadPath = config.uploadPath.replace(/\\/g, '/');
-  const urlPath = relativePath.replace(uploadPath, '/uploads');
-  return `${baseUrl}${urlPath}`;
+  
+  console.log('Debug generateFileUrl:', { 
+    baseUrl, 
+    relativePath, 
+    uploadPath, 
+    filePath: file.path 
+  });
+  
+  // Extract the relative path from the upload directory
+  let urlPath = relativePath.replace(uploadPath, '/uploads');
+  
+  console.log('URL path after replacement:', urlPath);
+  
+  // Ensure the URL path starts with a forward slash
+  if (!urlPath.startsWith('/')) {
+    urlPath = '/' + urlPath;
+  }
+  
+  const finalUrl = `${baseUrl}${urlPath}`;
+  console.log('Final URL:', finalUrl);
+  
+  return finalUrl;
 };
 
 module.exports = {

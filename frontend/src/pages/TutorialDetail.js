@@ -3,6 +3,7 @@ import { Card, Button, Progress, Typography, Row, Col, Tag, Rate, Divider, messa
 import { PlayCircleOutlined, DownloadOutlined, LeftOutlined, CheckCircleOutlined, ClockCircleOutlined, QuestionCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tutorialService } from '../api/tutorialApi';
+import { quizService } from '../api/quizApi';
 import { generateTutorialPDF, generateCertificate } from '../utils/pdfGenerator';
 import { useAuth } from '../context/AuthContext';
 import Quiz from '../components/Quiz';
@@ -24,61 +25,28 @@ const TutorialDetail = () => {
 
   const fetchTutorial = useCallback(async () => {
     try {
-      const tutorials = await tutorialService.getAllTutorials();
-      const tutorialData = tutorials.find(t => t.id === parseInt(id));
+      const tutorialData = await tutorialService.getTutorialById(parseInt(id));
       setTutorial(tutorialData);
       
-      // Mock quiz data for this tutorial
-      const mockQuizzes = [
-        {
-          id: 1,
-          title: 'Amharic Basics Quiz',
-          tutorialId: parseInt(id),
-          timeLimit: 600, // 10 minutes
-          questions: [
-            {
-              id: 1,
-              question: 'What is the first letter of the Amharic alphabet?',
-              type: 'multiple_choice',
-              options: ['ሀ', 'ለ', 'መ', 'ሰ'],
-              correctAnswer: 0,
-              points: 10
-            },
-            {
-              id: 2,
-              question: 'How do you say "Hello" in Amharic?',
-              type: 'multiple_choice',
-              options: ['ሰላም', 'ታዲያስ', 'እንደምን', 'አመሰግናለሁ'],
-              correctAnswer: 0,
-              points: 10
-            },
-            {
-              id: 3,
-              question: 'Amharic is written from left to right.',
-              type: 'true_false',
-              options: ['True', 'False'],
-              correctAnswer: 1,
-              points: 5
-            }
-          ],
-          totalPoints: 25
-        }
-      ];
-      setQuizzes(mockQuizzes);
+      // Fetch quizzes for this tutorial
+      const quizzesData = await quizService.getQuizzesByTutorial(parseInt(id));
+      setQuizzes(quizzesData);
       
-      // Simulate progress data
-      const progressData = await tutorialService.getUserProgress(1);
-      const userProgress = progressData.find(p => p.tutorialId === parseInt(id));
-      if (userProgress) {
-        setProgress(userProgress.progress);
-        setCompleted(userProgress.status === 'completed');
+      // Fetch user progress for this tutorial
+      if (user?.id) {
+        const progressData = await tutorialService.getUserProgress(user.id);
+        const userProgress = progressData.find(p => p.tutorialId === parseInt(id));
+        if (userProgress) {
+          setProgress(userProgress.progress);
+          setCompleted(userProgress.status === 'completed');
+        }
       }
     } catch (error) {
       message.error('Failed to load tutorial');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     fetchTutorial();
@@ -103,16 +71,24 @@ const TutorialDetail = () => {
     }
   };
 
-  const handleMarkComplete = () => {
-    setCompleted(true);
-    setProgress(100);
-    message.success('Tutorial marked as complete!');
+  const handleMarkComplete = async () => {
+    try {
+      await tutorialService.updateProgress(parseInt(id), { progress: 100, status: 'completed' });
+      setCompleted(true);
+      setProgress(100);
+      message.success('Tutorial marked as complete!');
+    } catch (error) {
+      message.error('Failed to mark tutorial as complete');
+    }
   };
 
-  const handleQuizComplete = (result) => {
-    message.success(`Quiz completed! Score: ${result.score}%`);
-    // In a real app, you would save the quiz result to the backend
-    console.log('Quiz result:', result);
+  const handleQuizComplete = async (result) => {
+    try {
+      await quizService.submitQuizAttempt(result.quizId, result.answers);
+      message.success(`Quiz completed! Score: ${result.score}%`);
+    } catch (error) {
+      message.error('Failed to submit quiz result');
+    }
   };
 
   const handleBack = () => {

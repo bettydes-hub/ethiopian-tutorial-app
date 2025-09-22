@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5000,
-    host: true
+    host: true,
+    open: true
+  },
+  define: {
+    'process.env': process.env
   },
   esbuild: {
     loader: 'jsx',

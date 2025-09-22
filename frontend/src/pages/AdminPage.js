@@ -45,6 +45,13 @@ const AdminPage = () => {
     }
   };
 
+  const handleCreateUser = () => {
+    console.log('Creating new user');
+    setEditingUser(null);
+    form.resetFields();
+    setIsUserModalVisible(true);
+  };
+
   const handleEditUser = (user) => {
     setEditingUser(user);
     form.setFieldsValue(user);
@@ -140,19 +147,27 @@ const AdminPage = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      console.log('Form values:', values);
       
       if (editingUser) {
+        console.log('Updating user:', editingUser.id);
         const updatedUser = await userService.updateUser(editingUser.id, values);
+        console.log('Updated user:', updatedUser);
         setUsers(users.map(user => 
           user.id === editingUser.id ? updatedUser : user
         ));
         message.success('User updated successfully');
       } else {
+        console.log('Creating new user with values:', values);
         const newUser = await userService.createUser(values);
+        console.log('Created user:', newUser);
         setUsers([...users, newUser]);
         message.success('User created successfully');
       }
       
+      // Reset form and close modal
+      form.resetFields();
+      setEditingUser(null);
       setIsUserModalVisible(false);
     } catch (error) {
       console.error('Error saving user:', error);
@@ -187,19 +202,27 @@ const AdminPage = () => {
   const handleCategoryModalOk = async () => {
     try {
       const values = await categoryForm.validateFields();
+      console.log('Category form values:', values);
       
       if (editingCategory) {
+        console.log('Updating category:', editingCategory.id);
         const updatedCategory = await categoryService.updateCategory(editingCategory.id, values);
+        console.log('Updated category:', updatedCategory);
         setCategories(categories.map(cat => 
           cat.id === editingCategory.id ? updatedCategory : cat
         ));
         message.success('Category updated successfully');
       } else {
+        console.log('Creating new category with values:', values);
         const newCategory = await categoryService.createCategory(values);
+        console.log('Created category:', newCategory);
         setCategories([...categories, newCategory]);
         message.success('Category created successfully');
       }
       
+      // Reset form and close modal
+      categoryForm.resetFields();
+      setEditingCategory(null);
       setIsCategoryModalVisible(false);
     } catch (error) {
       console.error('Error saving category:', error);
@@ -376,10 +399,25 @@ const AdminPage = () => {
   // Management dropdown menu
   const managementMenu = (
     <Menu>
-      <Menu.Item key="add-teacher" icon={<TeamOutlined />} onClick={() => { setEditingUser(null); form.resetFields(); form.setFieldsValue({ role: 'teacher' }); setIsUserModalVisible(true); }}>
+      <Menu.Item key="add-user" icon={<UserOutlined />} onClick={handleCreateUser}>
+        Add User
+      </Menu.Item>
+      <Menu.Item key="add-teacher" icon={<TeamOutlined />} onClick={() => { 
+        console.log('Adding teacher');
+        setEditingUser(null); 
+        form.resetFields(); 
+        form.setFieldsValue({ role: 'teacher' }); 
+        setIsUserModalVisible(true); 
+      }}>
         Add Teacher
       </Menu.Item>
-      <Menu.Item key="add-admin" icon={<CrownOutlined />} onClick={() => { setEditingUser(null); form.resetFields(); form.setFieldsValue({ role: 'admin' }); setIsUserModalVisible(true); }}>
+      <Menu.Item key="add-admin" icon={<CrownOutlined />} onClick={() => { 
+        console.log('Adding admin');
+        setEditingUser(null); 
+        form.resetFields(); 
+        form.setFieldsValue({ role: 'admin' }); 
+        setIsUserModalVisible(true); 
+      }}>
         Add Admin
       </Menu.Item>
       <Menu.Divider />
@@ -501,7 +539,11 @@ const AdminPage = () => {
         title={editingUser ? 'Edit User' : 'Add User'}
         visible={isUserModalVisible}
         onOk={handleModalOk}
-        onCancel={() => setIsUserModalVisible(false)}
+        onCancel={() => {
+          form.resetFields();
+          setEditingUser(null);
+          setIsUserModalVisible(false);
+        }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -522,6 +564,23 @@ const AdminPage = () => {
           >
             <Input placeholder="Enter email" />
           </Form.Item>
+
+          {!editingUser && (
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[
+                { required: true, message: 'Please input password!' },
+                { min: 6, message: 'Password must be at least 6 characters!' },
+                {
+                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                  message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number!'
+                }
+              ]}
+            >
+              <Input.Password placeholder="Enter password" />
+            </Form.Item>
+          )}
 
           <Form.Item
             name="role"
@@ -559,17 +618,34 @@ const AdminPage = () => {
           <Form.Item
             name="name"
             label="Category Name"
-            rules={[{ required: true, message: 'Please input category name!' }]}
+            rules={[
+              { required: true, message: 'Please input category name!' },
+              { min: 2, message: 'Name must be at least 2 characters!' },
+              { max: 50, message: 'Name must be no more than 50 characters!' }
+            ]}
           >
-            <Input placeholder="Enter category name" />
+            <Input 
+              placeholder="Enter category name (2-50 characters)" 
+              showCount
+              maxLength={50}
+            />
           </Form.Item>
 
           <Form.Item
             name="description"
             label="Description"
-            rules={[{ required: true, message: 'Please input category description!' }]}
+            rules={[
+              { required: true, message: 'Please input category description!' },
+              { min: 10, message: 'Description must be at least 10 characters!' },
+              { max: 200, message: 'Description must be no more than 200 characters!' }
+            ]}
           >
-            <Input.TextArea rows={3} placeholder="Enter category description" />
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Enter category description (10-200 characters)" 
+              showCount
+              maxLength={200}
+            />
           </Form.Item>
 
           <Form.Item
@@ -578,17 +654,24 @@ const AdminPage = () => {
             rules={[{ required: true, message: 'Please select a color!' }]}
           >
             <Select placeholder="Select a color">
-              <Option value="blue">Blue</Option>
-              <Option value="green">Green</Option>
-              <Option value="red">Red</Option>
-              <Option value="orange">Orange</Option>
-              <Option value="purple">Purple</Option>
-              <Option value="pink">Pink</Option>
-              <Option value="brown">Brown</Option>
-              <Option value="cyan">Cyan</Option>
-              <Option value="magenta">Magenta</Option>
+              <Option value="#1890ff">Blue</Option>
+              <Option value="#52c41a">Green</Option>
+              <Option value="#ff4d4f">Red</Option>
+              <Option value="#fa8c16">Orange</Option>
+              <Option value="#722ed1">Purple</Option>
+              <Option value="#eb2f96">Pink</Option>
+              <Option value="#a0522d">Brown</Option>
+              <Option value="#13c2c2">Cyan</Option>
+              <Option value="#eb2f96">Magenta</Option>
             </Select>
           </Form.Item>
+          
+          <div style={{ fontSize: '0.85em', color: '#888', marginTop: '10px' }}>
+            <strong>Requirements:</strong><br />
+            • Name: 2-50 characters<br />
+            • Description: 10-200 characters<br />
+            • Color: Valid hex color code
+          </div>
         </Form>
       </Modal>
     </div>

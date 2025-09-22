@@ -19,7 +19,7 @@ module.exports = {
   // CORS Configuration
   allowedOrigins: process.env.ALLOWED_ORIGINS ? 
     process.env.ALLOWED_ORIGINS.split(',') : 
-    ['http://localhost:5000', 'http://localhost:3000'],
+    ['http://localhost:5000', 'http://localhost:5500'],
 
   // Cloudinary Configuration (Optional)
   cloudinary: {

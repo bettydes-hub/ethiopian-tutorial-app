@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5500/api';
 
 const quizApi = axios.create({
   baseURL: `${API_BASE_URL}/quizzes`,
@@ -23,7 +23,7 @@ export const quizService = {
   getAllQuizzes: async (params = {}) => {
     try {
       const response = await quizApi.get('/', { params });
-      return response.data.quizzes || response.data;
+      return response.data.data || response.data.quizzes || response.data;
     } catch (error) {
       console.error('Error fetching quizzes:', error);
       throw error;
@@ -34,7 +34,7 @@ export const quizService = {
   getQuizById: async (id) => {
     try {
       const response = await quizApi.get(`/${id}`);
-      return response.data.quiz || response.data;
+      return response.data.data || response.data.quiz || response.data;
     } catch (error) {
       console.error('Error fetching quiz:', error);
       throw error;
@@ -45,7 +45,7 @@ export const quizService = {
   createQuiz: async (quizData) => {
     try {
       const response = await quizApi.post('/', quizData);
-      return response.data.quiz || response.data;
+      return response.data.data || response.data.quiz || response.data;
     } catch (error) {
       console.error('Error creating quiz:', error);
       throw error;
@@ -56,7 +56,7 @@ export const quizService = {
   updateQuiz: async (id, quizData) => {
     try {
       const response = await quizApi.put(`/${id}`, quizData);
-      return response.data.quiz || response.data;
+      return response.data.data || response.data.quiz || response.data;
     } catch (error) {
       console.error('Error updating quiz:', error);
       throw error;
@@ -78,7 +78,7 @@ export const quizService = {
   getQuizzesByTutorial: async (tutorialId, params = {}) => {
     try {
       const response = await quizApi.get(`/tutorial/${tutorialId}`, { params });
-      return response.data.quizzes || response.data;
+      return response.data.data || response.data.quizzes || response.data;
     } catch (error) {
       console.error('Error fetching quizzes by tutorial:', error);
       throw error;
@@ -88,7 +88,7 @@ export const quizService = {
   // Submit quiz attempt
   submitQuizAttempt: async (quizId, answers) => {
     try {
-      const response = await quizApi.post(`/${quizId}/attempt`, { answers });
+      const response = await quizApi.post(`/attempt/${quizId}/submit`, { answers });
       return response.data;
     } catch (error) {
       console.error('Error submitting quiz attempt:', error);
@@ -100,7 +100,7 @@ export const quizService = {
   getUserQuizAttempts: async (userId, params = {}) => {
     try {
       const response = await quizApi.get(`/user/${userId}/attempts`, { params });
-      return response.data.attempts || response.data;
+      return response.data.data || response.data.attempts || response.data;
     } catch (error) {
       console.error('Error fetching user quiz attempts:', error);
       throw error;
@@ -111,7 +111,7 @@ export const quizService = {
   getQuizAttempts: async (quizId, params = {}) => {
     try {
       const response = await quizApi.get(`/${quizId}/attempts`, { params });
-      return response.data.attempts || response.data;
+      return response.data.data || response.data.attempts || response.data;
     } catch (error) {
       console.error('Error fetching quiz attempts:', error);
       throw error;
@@ -122,7 +122,7 @@ export const quizService = {
   getQuizAttemptById: async (attemptId) => {
     try {
       const response = await quizApi.get(`/attempts/${attemptId}`);
-      return response.data.attempt || response.data;
+      return response.data.data || response.data.attempt || response.data;
     } catch (error) {
       console.error('Error fetching quiz attempt:', error);
       throw error;
@@ -136,6 +136,28 @@ export const quizService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching quiz stats:', error);
+      throw error;
+    }
+  },
+
+  // Start quiz attempt
+  startQuizAttempt: async (quizId) => {
+    try {
+      const response = await quizApi.post(`/${quizId}/start`);
+      return response.data;
+    } catch (error) {
+      console.error('Error starting quiz attempt:', error);
+      throw error;
+    }
+  },
+
+  // Toggle publish status
+  togglePublishStatus: async (quizId) => {
+    try {
+      const response = await quizApi.patch(`/${quizId}/publish`);
+      return response.data;
+    } catch (error) {
+      console.error('Error toggling publish status:', error);
       throw error;
     }
   },

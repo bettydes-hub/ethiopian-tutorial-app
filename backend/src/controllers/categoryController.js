@@ -1,6 +1,7 @@
 const Category = require('../models/Category');
 const Tutorial = require('../models/Tutorial');
 const { formatResponse, formatPaginatedResponse, calculatePagination } = require('../utils/helpers');
+const { sequelize } = require('../config/database');
 
 // Get all categories
 const getAllCategories = async (req, res) => {
@@ -11,7 +12,7 @@ const getAllCategories = async (req, res) => {
     // Build query
     const query = {};
     if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
+      query.is_active = isActive === 'true';
     }
     
     // Build sort object
@@ -19,12 +20,12 @@ const getAllCategories = async (req, res) => {
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
     // Get categories with pagination
-    const categories = await Category.find(query)
-      .sort(sort)
-      .skip(pagination.skip)
-      .limit(pagination.limit);
-    
-    const total = await Category.countDocuments(query);
+    const { count: total, rows: categories } = await Category.findAndCountAll({
+      where: query,
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
     res.json(
       formatPaginatedResponse(categories, {
@@ -45,7 +46,7 @@ const getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -69,20 +70,18 @@ const createCategory = async (req, res) => {
     const { name, description, color } = req.body;
     
     // Check if category already exists
-    const existingCategory = await Category.findOne({ name });
+    const existingCategory = await Category.findOne({ where: { name } });
     if (existingCategory) {
       return res.status(400).json(
         formatResponse(false, null, '', 'Category with this name already exists')
       );
     }
     
-    const category = new Category({
+    const category = await Category.create({
       name,
       description,
       color
     });
-    
-    await category.save();
     
     res.status(201).json(
       formatResponse(true, { category }, 'Category created successfully')
@@ -101,7 +100,7 @@ const updateCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description, color, isActive } = req.body;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -110,7 +109,7 @@ const updateCategory = async (req, res) => {
     
     // Check if name is being changed and if it's already taken
     if (name && name !== category.name) {
-      const existingCategory = await Category.findOne({ name });
+      const existingCategory = await Category.findOne({ where: { name } });
       if (existingCategory) {
         return res.status(400).json(
           formatResponse(false, null, '', 'Category with this name already exists')
@@ -122,7 +121,7 @@ const updateCategory = async (req, res) => {
     if (name) category.name = name;
     if (description) category.description = description;
     if (color) category.color = color;
-    if (isActive !== undefined) category.isActive = isActive;
+    if (isActive !== undefined) category.is_active = isActive;
     
     await category.save();
     
@@ -142,7 +141,7 @@ const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -150,14 +149,14 @@ const deleteCategory = async (req, res) => {
     }
     
     // Check if category has tutorials
-    const tutorialCount = await Tutorial.countDocuments({ category: category.name });
+    const tutorialCount = await Tutorial.count({ where: { category: category.name } });
     if (tutorialCount > 0) {
       return res.status(400).json(
         formatResponse(false, null, '', `Cannot delete category with ${tutorialCount} tutorials. Please move or delete the tutorials first.`)
       );
     }
     
-    await Category.findByIdAndDelete(id);
+    await Category.destroy({ where: { id } });
     
     res.json(
       formatResponse(true, null, 'Category deleted successfully')
@@ -175,7 +174,7 @@ const getCategoryStats = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -183,34 +182,38 @@ const getCategoryStats = async (req, res) => {
     }
     
     // Get tutorial statistics
-    const totalTutorials = await Tutorial.countDocuments({ category: category.name });
-    const publishedTutorials = await Tutorial.countDocuments({ 
-      category: category.name, 
-      isPublished: true 
+    const totalTutorials = await Tutorial.count({ where: { category: category.name } });
+    const publishedTutorials = await Tutorial.count({ 
+      where: { category: category.name, is_published: true } 
     });
     const draftTutorials = totalTutorials - publishedTutorials;
     
     // Get difficulty distribution
-    const difficultyStats = await Tutorial.aggregate([
-      { $match: { category: category.name } },
-      { $group: { _id: '$difficulty', count: { $sum: 1 } } }
-    ]);
+    const difficultyStats = await Tutorial.findAll({
+      where: { category: category.name },
+      attributes: [
+        'difficulty',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['difficulty']
+    });
     
-    // Get average rating
-    const ratingStats = await Tutorial.aggregate([
-      { $match: { category: category.name, isPublished: true } },
-      { $group: { 
-        _id: null, 
-        averageRating: { $avg: '$rating' },
-        totalRatings: { $sum: '$ratingCount' }
-      }}
-    ]);
+    // Get average rating (simplified for now)
+    const ratingStats = await Tutorial.findAll({
+      where: { category: category.name, is_published: true },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'averageRating'],
+        [sequelize.fn('SUM', sequelize.col('rating_count')), 'totalRatings']
+      ]
+    });
     
     // Get recent tutorials
-    const recentTutorials = await Tutorial.find({ category: category.name })
-      .select('title createdAt isPublished')
-      .sort({ createdAt: -1 })
-      .limit(5);
+    const recentTutorials = await Tutorial.findAll({
+      where: { category: category.name },
+      attributes: ['title', 'created_at', 'is_published'],
+      order: [['created_at', 'DESC']],
+      limit: 5
+    });
     
     const stats = {
       totalTutorials,
@@ -240,7 +243,7 @@ const getCategoryWithTutorials = async (req, res) => {
     const { page, limit, difficulty, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     const pagination = calculatePagination(page, limit);
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -258,13 +261,17 @@ const getCategoryWithTutorials = async (req, res) => {
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
     // Get tutorials
-    const tutorials = await Tutorial.find(tutorialQuery)
-      .populate('teacherId', 'name email profilePicture')
-      .sort(sort)
-      .skip(pagination.skip)
-      .limit(pagination.limit);
-    
-    const total = await Tutorial.countDocuments(tutorialQuery);
+    const { count: total, rows: tutorials } = await Tutorial.findAndCountAll({
+      where: tutorialQuery,
+      include: [{
+        model: require('../models/User'),
+        as: 'teacher',
+        attributes: ['id', 'name', 'email', 'profile_picture']
+      }],
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      offset: pagination.skip,
+      limit: pagination.limit
+    });
     
     res.json(
       formatResponse(true, {
@@ -288,7 +295,7 @@ const toggleCategoryStatus = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')
@@ -312,9 +319,11 @@ const toggleCategoryStatus = async (req, res) => {
 // Get category list (for dropdowns)
 const getCategoryList = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true })
-      .select('name description color tutorialCount')
-      .sort({ name: 1 });
+    const categories = await Category.findAll({
+      where: { is_active: true },
+      attributes: ['name', 'description', 'color', 'tutorial_count'],
+      order: [['name', 'ASC']]
+    });
     
     res.json(
       formatResponse(true, { categories }, 'Category list retrieved successfully')
@@ -332,7 +341,7 @@ const updateCategoryTutorialCount = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const category = await Category.findById(id);
+    const category = await Category.findByPk(id);
     if (!category) {
       return res.status(404).json(
         formatResponse(false, null, '', 'Category not found')

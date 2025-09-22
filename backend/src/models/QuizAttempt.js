@@ -72,6 +72,11 @@ const QuizAttempt = sequelize.define('QuizAttempt', {
   completed_at: {
     type: DataTypes.DATE,
     allowNull: false
+  },
+  status: {
+    type: DataTypes.ENUM('in_progress', 'completed', 'timeout', 'abandoned'),
+    allowNull: false,
+    defaultValue: 'in_progress'
   }
 }, {
   tableName: 'quiz_attempts',

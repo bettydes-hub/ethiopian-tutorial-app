@@ -55,18 +55,18 @@ const AppContent = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Navbar />
-      <Layout>
+      <Layout style={{ flexDirection: 'row' }}>
         <Sidebar />
-        <Layout style={{ padding: '0 24px 24px' }}>
+        <Layout style={{ flex: 1, marginLeft: 0 }}>
           <Content
             style={{
-              padding: 24,
+              padding: '24px',
               margin: 0,
-              minHeight: 280,
-              background: '#fff',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              minHeight: 'calc(100vh - 64px)',
+              background: '#f5f5f5',
+              width: '100%',
             }}
+            className="main-content"
           >
             <Routes>
               <Route path="/" element={<Dashboard />} />

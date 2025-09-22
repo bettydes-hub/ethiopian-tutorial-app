@@ -117,6 +117,9 @@ const getTutorialById = async (req, res) => {
 // Create tutorial
 const createTutorial = async (req, res) => {
   try {
+    console.log('Create tutorial request body:', req.body);
+    console.log('User from token:', req.user);
+    
     const {
       title,
       description,
@@ -494,6 +497,90 @@ const addRating = async (req, res) => {
   }
 };
 
+// Upload video file
+const uploadVideo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'No video file uploaded')
+      );
+    }
+
+    const { generateFileUrl } = require('../middleware/upload');
+    const videoUrl = generateFileUrl(req, req.file);
+
+    res.json(
+      formatResponse(true, { 
+        videoUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      }, 'Video uploaded successfully')
+    );
+  } catch (error) {
+    console.error('Upload video error:', error);
+    res.status(500).json(
+      formatResponse(false, null, '', 'Failed to upload video')
+    );
+  }
+};
+
+// Upload PDF file
+const uploadPdf = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'No PDF file uploaded')
+      );
+    }
+
+    const { generateFileUrl } = require('../middleware/upload');
+    const pdfUrl = generateFileUrl(req, req.file);
+
+    res.json(
+      formatResponse(true, { 
+        pdfUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      }, 'PDF uploaded successfully')
+    );
+  } catch (error) {
+    console.error('Upload PDF error:', error);
+    res.status(500).json(
+      formatResponse(false, null, '', 'Failed to upload PDF')
+    );
+  }
+};
+
+// Upload thumbnail image
+const uploadThumbnail = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'No thumbnail image uploaded')
+      );
+    }
+
+    const { generateFileUrl } = require('../middleware/upload');
+    const thumbnailUrl = generateFileUrl(req, req.file);
+
+    res.json(
+      formatResponse(true, { 
+        thumbnailUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      }, 'Thumbnail uploaded successfully')
+    );
+  } catch (error) {
+    console.error('Upload thumbnail error:', error);
+    res.status(500).json(
+      formatResponse(false, null, '', 'Failed to upload thumbnail')
+    );
+  }
+};
+
 module.exports = {
   getAllTutorials,
   getTutorialById,
@@ -505,5 +592,8 @@ module.exports = {
   getUserProgress,
   getAllUserProgress,
   togglePublishStatus,
-  addRating
+  addRating,
+  uploadVideo,
+  uploadPdf,
+  uploadThumbnail
 };

@@ -56,86 +56,123 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>Welcome back, {user?.name}!</Title>
-      <Text type="secondary">Here's your learning progress</Text>
+    <div className="dashboard-container" style={{ padding: '24px' }}>
+      <div className="dashboard-header" style={{ marginBottom: '32px' }}>
+        <Title level={2} style={{ margin: 0, color: '#262626' }}>
+          Welcome back, {user?.name}! 👋
+        </Title>
+        <Text type="secondary" style={{ fontSize: '16px' }}>
+          Here's your learning progress
+        </Text>
+      </div>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+      <Row gutter={[24, 24]} className="stats-row">
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="stat-card" hoverable>
             <Statistic
               title="Total Tutorials"
               value={stats.totalTutorials}
-              prefix={<BookOutlined />}
+              prefix={<BookOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#262626', fontSize: '28px', fontWeight: '600' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="stat-card" hoverable>
             <Statistic
               title="Completed"
               value={stats.completedTutorials}
-              prefix={<TrophyOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              prefix={<TrophyOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a', fontSize: '28px', fontWeight: '600' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="stat-card" hoverable>
             <Statistic
               title="In Progress"
               value={stats.inProgressTutorials}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14', fontSize: '28px', fontWeight: '600' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="stat-card" hoverable>
             <Statistic
               title="Completion Rate"
               value={getCompletionPercentage()}
               suffix="%"
-              prefix={<UserOutlined />}
+              prefix={<UserOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1', fontSize: '28px', fontWeight: '600' }}
             />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+      <Row gutter={[24, 24]} className="content-row">
         <Col xs={24} lg={12}>
-          <Card title="Learning Progress" extra={<Button type="link">View All</Button>}>
-            <Progress
-              percent={getCompletionPercentage()}
-              status={getCompletionPercentage() === 100 ? 'success' : 'active'}
-              strokeColor={{
-                '0%': '#108ee9',
-                '100%': '#87d068',
-              }}
-            />
-            <div style={{ marginTop: 16 }}>
-              <Text>
-                {stats.completedTutorials} of {stats.totalTutorials} tutorials completed
-              </Text>
+          <Card 
+            className="progress-card" 
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrophyOutlined style={{ color: '#52c41a' }} />
+                Learning Progress
+              </div>
+            } 
+            extra={<Button type="link" style={{ color: '#1890ff' }}>View All</Button>}
+          >
+            <div style={{ padding: '8px 0' }}>
+              <Progress
+                percent={getCompletionPercentage()}
+                status={getCompletionPercentage() === 100 ? 'success' : 'active'}
+                strokeColor={{
+                  '0%': '#1890ff',
+                  '100%': '#52c41a',
+                }}
+                strokeWidth={8}
+                style={{ marginBottom: '16px' }}
+              />
+              <div style={{ textAlign: 'center' }}>
+                <Text style={{ fontSize: '16px', fontWeight: '500' }}>
+                  {stats.completedTutorials} of {stats.totalTutorials} tutorials completed
+                </Text>
+              </div>
             </div>
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Recent Tutorials" extra={<Button type="link">View All</Button>}>
-            <List
-              dataSource={stats.recentTutorials}
-              renderItem={(tutorial) => (
-                <List.Item>
-                  <List.Item.Meta
-                    title={tutorial.title}
-                    description={tutorial.description}
-                  />
-                  <Button type="primary" size="small">
-                    Start
-                  </Button>
-                </List.Item>
-              )}
-            />
+          <Card 
+            className="tutorials-card"
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BookOutlined style={{ color: '#1890ff' }} />
+                Recent Tutorials
+              </div>
+            } 
+            extra={<Button type="link" style={{ color: '#1890ff' }}>View All</Button>}
+          >
+            {stats.recentTutorials.length > 0 ? (
+              <List
+                dataSource={stats.recentTutorials}
+                renderItem={(tutorial) => (
+                  <List.Item className="tutorial-item">
+                    <List.Item.Meta
+                      title={<Text style={{ fontWeight: '500' }}>{tutorial.title}</Text>}
+                      description={<Text type="secondary">{tutorial.description}</Text>}
+                    />
+                    <Button type="primary" size="small" style={{ borderRadius: '6px' }}>
+                      Start
+                    </Button>
+                  </List.Item>
+                )}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}>
+                <BookOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+                <div>No tutorials available yet</div>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

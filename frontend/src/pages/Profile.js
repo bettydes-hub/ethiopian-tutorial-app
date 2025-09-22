@@ -16,8 +16,7 @@ const Profile = () => {
   const handleProfileUpdate = async (values) => {
     setLoading(true);
     try {
-      // Mock API call - replace with actual API
-      const updatedUser = { ...user, ...values };
+      const updatedUser = await authService.updateProfile(values);
       updateUser(updatedUser);
       message.success('Profile updated successfully!');
     } catch (error) {
@@ -30,7 +29,6 @@ const Profile = () => {
   const handlePasswordChange = async (values) => {
     setLoading(true);
     try {
-      // Mock API call - replace with actual API
       await authService.changePassword(values);
       message.success('Password changed successfully!');
       passwordForm.resetFields();
@@ -189,8 +187,13 @@ const Profile = () => {
                     label="New Password"
                     rules={[
                       { required: true, message: 'Please input your new password!' },
-                      { min: 6, message: 'Password must be at least 6 characters!' }
+                      { min: 6, message: 'Password must be at least 6 characters!' },
+                      {
+                        pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                        message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number!'
+                      }
                     ]}
+                    help="Password must be at least 6 characters with uppercase, lowercase, and number"
                   >
                     <Input.Password 
                       prefix={<LockOutlined />} 

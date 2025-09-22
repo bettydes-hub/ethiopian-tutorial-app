@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Typography, Row, Col, Modal, Form, Input, Select, Upload, message, Tabs, Table, Tag, Space, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UploadOutlined, FileTextOutlined, VideoCameraOutlined, QuestionCircleOutlined, UserOutlined } from '@ant-design/icons';
+import { tutorialService } from '../api/tutorialApi';
+import { quizService } from '../api/quizApi';
+import { useAuth } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -8,6 +11,7 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 const TeacherPage = () => {
+  const { user } = useAuth();
   const [tutorials, setTutorials] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,69 +22,129 @@ const TeacherPage = () => {
   const [tutorialForm] = Form.useForm();
   const [quizForm] = Form.useForm();
   const [activeTab, setActiveTab] = useState('tutorials');
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState({
+    video: null,
+    pdf: null,
+    thumbnail: null
+  });
 
-  // Mock data for tutorials and quizzes
+  // Fetch tutorials and quizzes from API
   useEffect(() => {
-    const mockTutorials = [
-      {
-        id: 1,
-        title: 'Amharic Language Basics',
-        description: 'Introduction to Amharic alphabet and basic phrases',
-        category: 'Language',
-        difficulty: 'Beginner',
-        duration: '2h 30m',
-        videoFile: 'amharic_basics.mp4',
-        pdfFile: 'amharic_notes.pdf',
-        students: 25,
-        status: 'published'
-      },
-      {
-        id: 2,
-        title: 'Ethiopian Coffee Ceremony',
-        description: 'Learn the traditional coffee ceremony process',
-        category: 'Culture',
-        difficulty: 'Intermediate',
-        duration: '1h 15m',
-        videoFile: 'coffee_ceremony.mp4',
-        pdfFile: 'coffee_guide.pdf',
-        students: 18,
-        status: 'draft'
-      }
-    ];
-
-    const mockQuizzes = [
-      {
-        id: 1,
-        title: 'Amharic Basics Quiz',
-        tutorialId: 1,
-        questions: [
-          {
-            id: 1,
-            question: 'What is the first letter of the Amharic alphabet?',
-            type: 'multiple_choice',
-            options: ['ሀ', 'ለ', 'መ', 'ሰ'],
-            correctAnswer: 0,
-            points: 10
-          },
-          {
-            id: 2,
-            question: 'How do you say "Hello" in Amharic?',
-            type: 'multiple_choice',
-            options: ['ሰላም', 'ታዲያስ', 'እንደምን', 'አመሰግናለሁ'],
-            correctAnswer: 0,
-            points: 10
-          }
-        ],
-        totalPoints: 20,
-        attempts: 15,
-        averageScore: 75
-      }
-    ];
-
-    setTutorials(mockTutorials);
-    setQuizzes(mockQuizzes);
-    setLoading(false);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [tutorialsData, quizzesData] = await Promise.all([
+        tutorialService.getAllTutorials({ teacherId: user?.id }),
+        quizService.getAllQuizzes({ teacherId: user?.id })
+      ]);
+      setTutorials(tutorialsData);
+      setQuizzes(quizzesData);
+    } catch (error) {
+      message.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Upload functions
+  const uploadVideo = async (file) => {
+    try {
+      setUploadingVideo(true);
+      const formData = new FormData();
+      formData.append('video', file);
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5500/api'}/tutorials/upload/video`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        message.success('Video uploaded successfully');
+        setUploadedFiles(prev => ({ ...prev, video: result.data.videoUrl }));
+        return result.data.videoUrl;
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Video upload error:', error);
+      message.error('Failed to upload video');
+      throw error;
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const uploadPdf = async (file) => {
+    try {
+      setUploadingPdf(true);
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5500/api'}/tutorials/upload/pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        message.success('PDF uploaded successfully');
+        setUploadedFiles(prev => ({ ...prev, pdf: result.data.pdfUrl }));
+        return result.data.pdfUrl;
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      message.error('Failed to upload PDF');
+      throw error;
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
+  const uploadThumbnail = async (file) => {
+    try {
+      setUploadingThumbnail(true);
+      const formData = new FormData();
+      formData.append('thumbnail', file);
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5500/api'}/tutorials/upload/thumbnail`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        message.success('Thumbnail uploaded successfully');
+        setUploadedFiles(prev => ({ ...prev, thumbnail: result.data.thumbnailUrl }));
+        return result.data.thumbnailUrl;
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Thumbnail upload error:', error);
+      message.error('Failed to upload thumbnail');
+      throw error;
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
 
   const handleCreateTutorial = () => {
     setEditingTutorial(null);
@@ -108,16 +172,20 @@ const TeacherPage = () => {
 
   const handleTutorialSubmit = async (values) => {
     try {
+      console.log('Tutorial form values:', values);
+      console.log('Tutorial data being sent:', values);
+      
       if (editingTutorial) {
-        setTutorials(tutorials.map(t => t.id === editingTutorial.id ? { ...t, ...values } : t));
+        await tutorialService.updateTutorial(editingTutorial.id, values);
         message.success('Tutorial updated successfully');
       } else {
-        const newTutorial = { id: Date.now(), ...values, students: 0, status: 'draft' };
-        setTutorials([...tutorials, newTutorial]);
+        await tutorialService.createTutorial(values);
         message.success('Tutorial created successfully');
       }
       setIsTutorialModalVisible(false);
+      fetchData(); // Refresh data
     } catch (error) {
+      console.error('Tutorial creation error:', error);
       message.error('Failed to save tutorial');
     }
   };
@@ -125,16 +193,36 @@ const TeacherPage = () => {
   const handleQuizSubmit = async (values) => {
     try {
       if (editingQuiz) {
-        setQuizzes(quizzes.map(q => q.id === editingQuiz.id ? { ...q, ...values } : q));
+        await quizService.updateQuiz(editingQuiz.id, values);
         message.success('Quiz updated successfully');
       } else {
-        const newQuiz = { id: Date.now(), ...values, attempts: 0, averageScore: 0 };
-        setQuizzes([...quizzes, newQuiz]);
+        await quizService.createQuiz({ ...values, teacherId: user?.id });
         message.success('Quiz created successfully');
       }
       setIsQuizModalVisible(false);
+      fetchData(); // Refresh data
     } catch (error) {
       message.error('Failed to save quiz');
+    }
+  };
+
+  const handleDeleteTutorial = async (tutorialId) => {
+    try {
+      await tutorialService.deleteTutorial(tutorialId);
+      message.success('Tutorial deleted successfully');
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error('Failed to delete tutorial');
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId) => {
+    try {
+      await quizService.deleteQuiz(quizId);
+      message.success('Quiz deleted successfully');
+      fetchData(); // Refresh data
+    } catch (error) {
+      message.error('Failed to delete quiz');
     }
   };
 
@@ -167,11 +255,11 @@ const TeacherPage = () => {
     },
     {
       title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => (
-        <Tag color={status === 'published' ? 'green' : 'orange'}>
-          {status.toUpperCase()}
+      dataIndex: 'is_published',
+      key: 'is_published',
+      render: (isPublished) => (
+        <Tag color={isPublished ? 'green' : 'orange'}>
+          {isPublished ? 'PUBLISHED' : 'DRAFT'}
         </Tag>
       ),
     },
@@ -186,7 +274,7 @@ const TeacherPage = () => {
           <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditTutorial(record)}>
             Edit
           </Button>
-          <Button type="link" danger icon={<DeleteOutlined />} size="small">
+          <Button type="link" danger icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteTutorial(record.id)}>
             Delete
           </Button>
         </Space>
@@ -211,9 +299,8 @@ const TeacherPage = () => {
     },
     {
       title: 'Questions',
-      dataIndex: 'questions',
-      key: 'questions',
-      render: (questions) => questions.length,
+      dataIndex: 'total_questions',
+      key: 'total_questions',
     },
     {
       title: 'Total Points',
@@ -222,14 +309,14 @@ const TeacherPage = () => {
     },
     {
       title: 'Attempts',
-      dataIndex: 'attempts',
-      key: 'attempts',
+      dataIndex: 'total_attempts',
+      key: 'total_attempts',
     },
     {
       title: 'Avg Score',
-      dataIndex: 'averageScore',
-      key: 'averageScore',
-      render: (score) => `${score}%`,
+      dataIndex: 'average_score',
+      key: 'average_score',
+      render: (score) => score ? `${score}%` : 'N/A',
     },
     {
       title: 'Actions',
@@ -242,7 +329,7 @@ const TeacherPage = () => {
           <Button type="link" icon={<EditOutlined />} size="small" onClick={() => handleEditQuiz(record)}>
             Edit
           </Button>
-          <Button type="link" danger icon={<DeleteOutlined />} size="small">
+          <Button type="link" danger icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteQuiz(record.id)}>
             Delete
           </Button>
         </Space>
@@ -279,7 +366,7 @@ const TeacherPage = () => {
             <div style={{ textAlign: 'center' }}>
               <UserOutlined style={{ fontSize: 48, color: '#fa8c16', marginBottom: 16 }} />
               <Title level={4}>Total Students</Title>
-              <Text type="secondary">{tutorials.reduce((sum, t) => sum + t.students, 0)}</Text>
+              <Text type="secondary">{tutorials.reduce((sum, t) => sum + (t.students || 0), 0)}</Text>
             </div>
           </Card>
         </Col>
@@ -333,9 +420,17 @@ const TeacherPage = () => {
               <Form.Item
                 name="title"
                 label="Tutorial Title"
-                rules={[{ required: true, message: 'Please input tutorial title!' }]}
+                rules={[
+                  { required: true, message: 'Please input tutorial title!' },
+                  { min: 5, message: 'Title must be at least 5 characters!' },
+                  { max: 200, message: 'Title must be no more than 200 characters!' }
+                ]}
               >
-                <Input placeholder="Enter tutorial title" />
+                <Input 
+                  placeholder="Enter tutorial title (5-200 characters)" 
+                  showCount
+                  maxLength={200}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -358,9 +453,18 @@ const TeacherPage = () => {
           <Form.Item
             name="description"
             label="Description"
-            rules={[{ required: true, message: 'Please input description!' }]}
+            rules={[
+              { required: true, message: 'Please input description!' },
+              { min: 10, message: 'Description must be at least 10 characters!' },
+              { max: 500, message: 'Description must be no more than 500 characters!' }
+            ]}
           >
-            <TextArea rows={3} placeholder="Enter tutorial description" />
+            <TextArea 
+              rows={3} 
+              placeholder="Enter tutorial description (10-500 characters)" 
+              showCount
+              maxLength={500}
+            />
           </Form.Item>
 
           <Row gutter={16}>
@@ -393,42 +497,124 @@ const TeacherPage = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="videoFile"
+                name="videoUrl"
                 label="Video File"
                 rules={[{ required: true, message: 'Please upload video file!' }]}
               >
+                <Input
+                  value={uploadedFiles.video || ''}
+                  placeholder="Video URL will appear here after upload"
+                  readOnly
+                  suffix={
                 <Upload
                   name="video"
-                  listType="text"
-                  beforeUpload={() => false}
-                  onChange={(info) => {
-                    if (info.file) {
-                      tutorialForm.setFieldsValue({ videoFile: info.file.name });
-                    }
-                  }}
-                >
-                  <Button icon={<UploadOutlined />}>Upload Video</Button>
+                      showUploadList={false}
+                      beforeUpload={async (file) => {
+                        try {
+                          const videoUrl = await uploadVideo(file);
+                          tutorialForm.setFieldsValue({ videoUrl });
+                          setUploadedFiles(prev => ({ ...prev, video: videoUrl }));
+                          console.log('Video URL set:', videoUrl);
+                          return false; // Prevent default upload
+                        } catch (error) {
+                          console.error('Video upload error:', error);
+                          return false;
+                        }
+                      }}
+                    >
+                      <Button 
+                        icon={<UploadOutlined />} 
+                        loading={uploadingVideo}
+                        disabled={uploadingVideo}
+                        type={uploadedFiles.video ? 'primary' : 'default'}
+                      >
+                        {uploadingVideo ? 'Uploading...' : uploadedFiles.video ? 'Video Uploaded ✓' : 'Upload Video'}
+                      </Button>
                 </Upload>
+                  }
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="pdfFile"
+                name="pdfUrl"
                 label="PDF Notes"
                 rules={[{ required: true, message: 'Please upload PDF file!' }]}
               >
+                <Input
+                  value={uploadedFiles.pdf || ''}
+                  placeholder="PDF URL will appear here after upload"
+                  readOnly
+                  suffix={
                 <Upload
                   name="pdf"
-                  listType="text"
-                  beforeUpload={() => false}
-                  onChange={(info) => {
-                    if (info.file) {
-                      tutorialForm.setFieldsValue({ pdfFile: info.file.name });
-                    }
-                  }}
-                >
-                  <Button icon={<FileTextOutlined />}>Upload PDF</Button>
+                      showUploadList={false}
+                      beforeUpload={async (file) => {
+                        try {
+                          const pdfUrl = await uploadPdf(file);
+                          tutorialForm.setFieldsValue({ pdfUrl });
+                          setUploadedFiles(prev => ({ ...prev, pdf: pdfUrl }));
+                          console.log('PDF URL set:', pdfUrl);
+                          return false; // Prevent default upload
+                        } catch (error) {
+                          console.error('PDF upload error:', error);
+                          return false;
+                        }
+                      }}
+                    >
+                      <Button 
+                        icon={<FileTextOutlined />} 
+                        loading={uploadingPdf}
+                        disabled={uploadingPdf}
+                        type={uploadedFiles.pdf ? 'primary' : 'default'}
+                      >
+                        {uploadingPdf ? 'Uploading...' : uploadedFiles.pdf ? 'PDF Uploaded ✓' : 'Upload PDF'}
+                      </Button>
+                    </Upload>
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="thumbnail"
+                label="Thumbnail Image"
+              >
+                <Input
+                  value={uploadedFiles.thumbnail || ''}
+                  placeholder="Thumbnail URL will appear here after upload"
+                  readOnly
+                  suffix={
+                    <Upload
+                      name="thumbnail"
+                      showUploadList={false}
+                      beforeUpload={async (file) => {
+                        try {
+                          const thumbnailUrl = await uploadThumbnail(file);
+                          tutorialForm.setFieldsValue({ thumbnail: thumbnailUrl });
+                          setUploadedFiles(prev => ({ ...prev, thumbnail: thumbnailUrl }));
+                          console.log('Thumbnail URL set:', thumbnailUrl);
+                          return false; // Prevent default upload
+                        } catch (error) {
+                          console.error('Thumbnail upload error:', error);
+                          return false;
+                        }
+                      }}
+                    >
+                      <Button 
+                        icon={<UploadOutlined />} 
+                        loading={uploadingThumbnail}
+                        disabled={uploadingThumbnail}
+                        type={uploadedFiles.thumbnail ? 'primary' : 'default'}
+                      >
+                        {uploadingThumbnail ? 'Uploading...' : uploadedFiles.thumbnail ? 'Thumbnail Uploaded ✓' : 'Upload Thumbnail'}
+                      </Button>
                 </Upload>
+                  }
+                />
               </Form.Item>
             </Col>
           </Row>

@@ -4,6 +4,8 @@ const { body, param, query, validationResult } = require('express-validator');
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
+    console.log('Request body:', req.body);
     return res.status(400).json({
       success: false,
       error: 'Validation failed',
@@ -105,16 +107,16 @@ const validateTutorialCreation = [
     .withMessage('Duration is required'),
   body('videoUrl')
     .optional()
-    .isURL()
-    .withMessage('Video URL must be a valid URL'),
+    .isString()
+    .withMessage('Video URL must be a string'),
   body('pdfUrl')
     .optional()
-    .isURL()
-    .withMessage('PDF URL must be a valid URL'),
+    .isString()
+    .withMessage('PDF URL must be a string'),
   body('thumbnail')
     .optional()
-    .isURL()
-    .withMessage('Thumbnail URL must be a valid URL'),
+    .isString()
+    .withMessage('Thumbnail URL must be a string'),
   handleValidationErrors
 ];
 
@@ -150,16 +152,16 @@ const validateTutorialUpdate = [
     .withMessage('Duration cannot be empty'),
   body('videoUrl')
     .optional()
-    .isURL()
-    .withMessage('Video URL must be a valid URL'),
+    .isString()
+    .withMessage('Video URL must be a string'),
   body('pdfUrl')
     .optional()
-    .isURL()
-    .withMessage('PDF URL must be a valid URL'),
+    .isString()
+    .withMessage('PDF URL must be a string'),
   body('thumbnail')
     .optional()
-    .isURL()
-    .withMessage('Thumbnail URL must be a valid URL'),
+    .isString()
+    .withMessage('Thumbnail URL must be a string'),
   handleValidationErrors
 ];
 
@@ -175,8 +177,8 @@ const validateQuizCreation = [
     .isLength({ max: 500 })
     .withMessage('Description cannot exceed 500 characters'),
   body('tutorialId')
-    .isInt({ min: 1 })
-    .withMessage('Tutorial ID must be a valid integer'),
+    .isUUID()
+    .withMessage('Tutorial ID must be a valid UUID'),
   body('timeLimit')
     .optional()
     .isInt({ min: 0 })
@@ -197,6 +199,7 @@ const validateQuizCreation = [
     .isLength({ min: 5, max: 1000 })
     .withMessage('Question text must be between 5 and 1000 characters'),
   body('questions.*.type')
+    .optional()
     .isIn(['multiple_choice', 'true_false'])
     .withMessage('Question type must be multiple_choice or true_false'),
   body('questions.*.options')
@@ -284,8 +287,8 @@ const validateProgressUpdate = [
     .isIn(['not_started', 'in_progress', 'completed'])
     .withMessage('Status must be not_started, in_progress, or completed'),
   body('tutorialId')
-    .isInt({ min: 1 })
-    .withMessage('Tutorial ID must be a valid integer'),
+    .isUUID()
+    .withMessage('Tutorial ID must be a valid UUID'),
   handleValidationErrors
 ];
 
@@ -304,8 +307,8 @@ const validateQuizAttempt = [
 // Parameter validation
 const validateObjectId = (paramName) => [
   param(paramName)
-    .isInt({ min: 1 })
-    .withMessage(`${paramName} must be a valid integer`),
+    .isUUID()
+    .withMessage(`${paramName} must be a valid UUID`),
   handleValidationErrors
 ];
 

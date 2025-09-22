@@ -85,6 +85,7 @@ const Sidebar = () => {
   return (
     <Sider
       width={250}
+      className="sidebar"
       style={{
         background: '#fff',
         boxShadow: '2px 0 8px rgba(0,0,0,0.1)',

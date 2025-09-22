@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5500/api';
 
 const authApi = axios.create({
   baseURL: `${API_BASE_URL}/auth`,
@@ -52,7 +52,7 @@ export const authService = {
   login: async (credentials) => {
     try {
       const response = await authApi.post('/login', credentials);
-      const { user, token, refreshToken } = response.data;
+      const { user, token, refreshToken } = response.data.data;
       
       // Store tokens
       localStorage.setItem('token', token);
@@ -70,7 +70,7 @@ export const authService = {
   register: async (userData) => {
     try {
       const response = await authApi.post('/register', userData);
-      const { user, token, refreshToken } = response.data;
+      const { user, token, refreshToken } = response.data.data;
       
       // Store tokens
       localStorage.setItem('token', token);
@@ -101,7 +101,7 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       const response = await authApi.get('/me');
-      return response.data.user;
+      return response.data.data.user;
     } catch (error) {
       // If token is invalid, clear it
       localStorage.removeItem('token');
@@ -139,6 +139,26 @@ export const authService = {
   updateProfile: async (profileData) => {
     try {
       const response = await authApi.put('/profile', profileData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Request password reset
+  requestPasswordReset: async (email) => {
+    try {
+      const response = await authApi.post('/request-password-reset', { email });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Reset password
+  resetPassword: async (resetData) => {
+    try {
+      const response = await authApi.post('/reset-password', resetData);
       return response.data;
     } catch (error) {
       throw error;

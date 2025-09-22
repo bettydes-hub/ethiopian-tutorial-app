@@ -8,6 +8,9 @@ const path = require('path');
 const config = require('../config/config');
 const { handleUploadError, cleanupUploadedFiles } = require('./middleware/upload');
 
+// Import model associations
+require('./models/associations');
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');

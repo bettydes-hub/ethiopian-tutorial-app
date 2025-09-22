@@ -30,14 +30,10 @@ const Register = () => {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh',
+    <div className="auth-container" style={{ 
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }}>
-      <Card style={{ width: 400, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <Card className="auth-card">
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Title level={2} style={{ color: '#1890ff' }}>
             Join as a Student
@@ -93,8 +89,13 @@ const Register = () => {
             name="password"
             rules={[
               { required: true, message: 'Please input your password!' },
-              { min: 6, message: 'Password must be at least 6 characters!' }
+              { min: 6, message: 'Password must be at least 6 characters!' },
+              {
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number!'
+              }
             ]}
+            help="Password must be at least 6 characters with uppercase, lowercase, and number"
           >
             <Input.Password
               prefix={<LockOutlined />}
