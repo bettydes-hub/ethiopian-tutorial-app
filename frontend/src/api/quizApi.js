@@ -23,7 +23,13 @@ export const quizService = {
   getAllQuizzes: async (params = {}) => {
     try {
       const response = await quizApi.get('/', { params });
-      return response.data.data || response.data.quizzes || response.data;
+      console.log('Quiz API response:', response.data);
+      const quizzes = response.data.data || response.data.quizzes || response.data;
+      console.log('Extracted quizzes:', quizzes);
+      if (quizzes && quizzes.length > 0) {
+        console.log('First quiz tutorial:', quizzes[0].tutorial);
+      }
+      return quizzes;
     } catch (error) {
       console.error('Error fetching quizzes:', error);
       throw error;
@@ -99,11 +105,22 @@ export const quizService = {
     }
   },
 
-  // Submit quiz attempt
-  submitQuizAttempt: async (quizId, answers) => {
+  // Start quiz attempt
+  startQuizAttempt: async (quizId) => {
     try {
-      const response = await quizApi.post(`/attempt/${quizId}/submit`, { answers });
-      return response.data;
+      const response = await quizApi.post(`/${quizId}/start`);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error starting quiz attempt:', error);
+      throw error;
+    }
+  },
+
+  // Submit quiz attempt
+  submitQuizAttempt: async (attemptId, answers) => {
+    try {
+      const response = await quizApi.post(`/attempt/${attemptId}/submit`, { answers });
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error submitting quiz attempt:', error);
       throw error;
@@ -150,17 +167,6 @@ export const quizService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching quiz stats:', error);
-      throw error;
-    }
-  },
-
-  // Start quiz attempt
-  startQuizAttempt: async (quizId) => {
-    try {
-      const response = await quizApi.post(`/${quizId}/start`);
-      return response.data;
-    } catch (error) {
-      console.error('Error starting quiz attempt:', error);
       throw error;
     }
   },

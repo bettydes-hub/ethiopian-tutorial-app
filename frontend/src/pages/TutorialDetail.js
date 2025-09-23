@@ -9,7 +9,6 @@ import { useAuth } from '../context/AuthContext';
 import Quiz from '../components/Quiz';
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
 const TutorialDetail = () => {
   const { id } = useParams();
@@ -26,16 +25,10 @@ const TutorialDetail = () => {
   const fetchTutorial = useCallback(async () => {
     try {
       const tutorialData = await tutorialService.getTutorialById(id);
-      console.log('Tutorial data received:', tutorialData);
-      console.log('Video URL:', tutorialData?.video_url);
-      console.log('PDF URL:', tutorialData?.pdf_url);
-      console.log('Thumbnail:', tutorialData?.thumbnail);
       setTutorial(tutorialData);
       
       // Fetch quizzes for this tutorial
       const quizzesData = await quizService.getQuizzesByTutorial(id);
-      console.log('Quizzes data received:', quizzesData);
-      console.log('Quizzes array length:', quizzesData?.length || 0);
       setQuizzes(quizzesData);
       
       // Fetch user progress for this tutorial
@@ -48,7 +41,6 @@ const TutorialDetail = () => {
           }
         } catch (error) {
           // If no progress exists, that's fine - user hasn't started yet
-          console.log('No progress found for tutorial:', id);
         }
       }
     } catch (error) {
@@ -68,7 +60,18 @@ const TutorialDetail = () => {
   };
 
   const handleDownloadPDF = () => {
-    if (tutorial) {
+    if (tutorial?.pdf_url) {
+      // Download the actual uploaded PDF file
+      const link = document.createElement('a');
+      link.href = tutorial.pdf_url;
+      link.download = `${tutorial.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_course_materials.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success('Course materials downloaded successfully!');
+    } else {
+      // Fallback to generated PDF if no uploaded PDF
       generateTutorialPDF(tutorial);
       message.success('Course notes downloaded successfully!');
     }
@@ -94,10 +97,13 @@ const TutorialDetail = () => {
 
   const handleQuizComplete = async (result) => {
     try {
-      await quizService.submitQuizAttempt(result.quizId, result.answers);
+      // The quiz is already submitted by the Quiz component
+      // This is just for handling the completion callback
+      console.log('Quiz completed:', result);
       message.success(`Quiz completed! Score: ${result.score}%`);
     } catch (error) {
-      message.error('Failed to submit quiz result');
+      console.error('Error in quiz completion handler:', error);
+      message.error('Failed to handle quiz completion');
     }
   };
 
@@ -123,13 +129,13 @@ const TutorialDetail = () => {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div className="main-container">
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div className="mb-24">
         <Button 
           icon={<LeftOutlined />} 
           onClick={handleBack}
-          style={{ marginBottom: 16 }}
+          className="mb-16"
         >
           Back to Tutorials
         </Button>
@@ -137,7 +143,7 @@ const TutorialDetail = () => {
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={16}>
             <Title level={2}>{tutorial.title}</Title>
-            <Paragraph style={{ fontSize: '16px', marginBottom: 16 }}>
+            <Paragraph style={{ fontSize: '16px' }} className="mb-16">
               {tutorial.description}
             </Paragraph>
             
@@ -186,8 +192,14 @@ const TutorialDetail = () => {
 
       {/* Main Content Tabs */}
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab={<span><PlayCircleOutlined />Video Lesson</span>} key="content">
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'content',
+              label: <span><PlayCircleOutlined />Video Lesson</span>,
+              children: (
             <div style={{ 
               height: 400, 
               background: videoPlaying ? '#000' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -262,94 +274,104 @@ const TutorialDetail = () => {
                 </div>
               )}
             </div>
-          </TabPane>
-
-          <TabPane tab={<span><QuestionCircleOutlined />Quizzes</span>} key="quizzes">
-            {quizzes.length > 0 ? (
-              quizzes.map(quiz => (
-                <Quiz 
-                  key={quiz.id} 
-                  quiz={quiz} 
-                  onComplete={handleQuizComplete}
-                />
-              ))
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <QuestionCircleOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                <div>No quizzes available for this tutorial yet.</div>
-              </div>
-            )}
-          </TabPane>
-
-          <TabPane tab={<span><FileTextOutlined />Resources</span>} key="resources">
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12}>
-          <Card title="Learning Materials" extra={<DownloadOutlined />}>
-            <div style={{ marginBottom: 16 }}>
-              <Title level={5}>📄 Course Notes (PDF)</Title>
-              <Text type="secondary">Download the complete course notes and materials</Text>
-              <br />
-              <Button 
-                type="primary" 
-                icon={<DownloadOutlined />}
-                onClick={handleDownloadPDF}
-                style={{ marginTop: 8, marginRight: 8 }}
-              >
-                Download Notes
-              </Button>
-              {completed && (
-                <Button 
-                  type="default" 
-                  icon={<DownloadOutlined />}
-                  onClick={handleDownloadCertificate}
-                >
-                  Download Certificate
-                </Button>
-              )}
-            </div>
-            
-            <Divider />
-            
-            <div style={{ marginBottom: 16 }}>
-              <Title level={5}>📚 Additional Resources</Title>
-              <ul style={{ paddingLeft: 20 }}>
-                <li>Amharic Alphabet Chart</li>
-                <li>Cultural Context Guide</li>
-                <li>Practice Exercises</li>
-                <li>Audio Pronunciation Guide</li>
-              </ul>
-            </div>
-          </Card>
-        </Col>
-        
-        <Col xs={24} md={12}>
-          <Card title="Tutorial Information">
-            <div style={{ marginBottom: 16 }}>
-              <Title level={5}>📋 What You'll Learn</Title>
-              <ul style={{ paddingLeft: 20 }}>
-                <li>Basic Amharic alphabet recognition</li>
-                <li>Pronunciation techniques</li>
-                <li>Writing practice methods</li>
-                <li>Cultural significance of letters</li>
-              </ul>
-            </div>
-            
-            <Divider />
-            
-            <div>
-              <Title level={5}>🎯 Learning Objectives</Title>
-              <ul style={{ paddingLeft: 20 }}>
-                <li>Identify all 33 Amharic letters</li>
-                <li>Pronounce letters correctly</li>
-                <li>Write basic letter forms</li>
-                <li>Understand letter combinations</li>
-              </ul>
-            </div>
-          </Card>
-        </Col>
-      </Row>
-          </TabPane>
-        </Tabs>
+              )
+            },
+            {
+              key: 'quizzes',
+              label: <span><QuestionCircleOutlined />Quizzes</span>,
+              children: (
+                <>
+                  {quizzes.length > 0 ? (
+                    quizzes.map(quiz => (
+                      <Quiz 
+                        key={quiz.id} 
+                        quiz={quiz} 
+                        onComplete={handleQuizComplete}
+                      />
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                      <QuestionCircleOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+                      <div>No quizzes available for this tutorial yet.</div>
+                    </div>
+                  )}
+                </>
+              )
+            },
+            {
+              key: 'resources',
+              label: <span><FileTextOutlined />Resources</span>,
+              children: (
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}>
+                    <Card title="Learning Materials" extra={<DownloadOutlined />}>
+                      <div style={{ marginBottom: 16 }}>
+                        <Title level={5}>📄 Course Notes (PDF)</Title>
+                        <Text type="secondary">Download the complete course notes and materials</Text>
+                        <br />
+                        <Button 
+                          type="primary" 
+                          icon={<DownloadOutlined />}
+                          onClick={handleDownloadPDF}
+                          style={{ marginTop: 8, marginRight: 8 }}
+                        >
+                          Download Notes
+                        </Button>
+                        {completed && (
+                          <Button 
+                            type="default" 
+                            icon={<DownloadOutlined />}
+                            onClick={handleDownloadCertificate}
+                          >
+                            Download Certificate
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <Divider />
+                      
+                      <div style={{ marginBottom: 16 }}>
+                        <Title level={5}>📚 Additional Resources</Title>
+                        <ul style={{ paddingLeft: 20 }}>
+                          <li>Amharic Alphabet Chart</li>
+                          <li>Cultural Context Guide</li>
+                          <li>Practice Exercises</li>
+                          <li>Audio Pronunciation Guide</li>
+                        </ul>
+                      </div>
+                    </Card>
+                  </Col>
+                  
+                  <Col xs={24} md={12}>
+                    <Card title="Tutorial Information">
+                      <div style={{ marginBottom: 16 }}>
+                        <Title level={5}>📋 What You'll Learn</Title>
+                        <ul style={{ paddingLeft: 20 }}>
+                          <li>Basic Amharic alphabet recognition</li>
+                          <li>Pronunciation techniques</li>
+                          <li>Writing practice methods</li>
+                          <li>Cultural significance of letters</li>
+                        </ul>
+                      </div>
+                      
+                      <Divider />
+                      
+                      <div>
+                        <Title level={5}>🎯 Learning Objectives</Title>
+                        <ul style={{ paddingLeft: 20 }}>
+                          <li>Identify all 33 Amharic letters</li>
+                          <li>Pronounce letters correctly</li>
+                          <li>Write basic letter forms</li>
+                          <li>Understand letter combinations</li>
+                        </ul>
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+              )
+            }
+          ]}
+        />
       </Card>
     </div>
   );

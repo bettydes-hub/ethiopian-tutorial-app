@@ -21,23 +21,23 @@ const LandingPage = () => {
   const features = [
     {
       icon: <BookOutlined style={{ fontSize: 48, color: '#1890ff' }} />,
-      title: 'Comprehensive Tutorials',
-      description: 'Learn Ethiopian culture, language, history, and traditions through interactive video tutorials and downloadable materials.'
+      title: 'Structured Learning Paths',
+      description: 'Follow carefully designed educational sequences that build your knowledge step-by-step, from beginner to advanced levels.'
     },
     {
       icon: <TrophyOutlined style={{ fontSize: 48, color: '#52c41a' }} />,
-      title: 'Track Your Progress',
-      description: 'Monitor your learning journey with detailed progress tracking and achievement badges.'
+      title: 'Achievement-Based Learning',
+      description: 'Stay motivated with clear learning milestones, certificates, and progress tracking that celebrates your educational growth.'
     },
     {
       icon: <PlayCircleOutlined style={{ fontSize: 48, color: '#faad14' }} />,
-      title: 'Interactive Quizzes',
-      description: 'Test your knowledge with engaging quizzes and get instant feedback on your performance.'
+      title: 'Interactive Assessment',
+      description: 'Reinforce your learning with smart quizzes and practical exercises that adapt to your skill level and learning pace.'
     },
     {
       icon: <TeamOutlined style={{ fontSize: 48, color: '#722ed1' }} />,
-      title: 'Expert Teachers',
-      description: 'Learn from qualified Ethiopian educators and cultural experts who are passionate about sharing knowledge.'
+      title: 'Expert-Led Education',
+      description: 'Learn from certified Ethiopian educators and cultural specialists who bring authentic knowledge and teaching expertise.'
     }
   ];
 
@@ -52,19 +52,19 @@ const LandingPage = () => {
     {
       name: 'Alemayehu Tadesse',
       role: 'Student',
-      content: 'This platform has helped me reconnect with my Ethiopian heritage. The tutorials are comprehensive and easy to follow.',
+      content: 'This educational platform has transformed my learning experience. The structured approach and expert guidance have significantly improved my understanding of Ethiopian culture.',
       avatar: 'A'
     },
     {
       name: 'Dr. Meseret Bekele',
-      role: 'Teacher',
-      content: 'Teaching through this platform allows me to reach students worldwide and share Ethiopian culture effectively.',
+      role: 'Educator',
+      content: 'Teaching through this platform enables me to deliver high-quality education to students globally, ensuring they receive comprehensive and authentic learning experiences.',
       avatar: 'M'
     },
     {
       name: 'Sarah Johnson',
       role: 'Student',
-      content: 'As someone interested in Ethiopian culture, this platform provides authentic and well-structured learning materials.',
+      content: 'The educational methodology here is exceptional. I\'ve gained deep insights into Ethiopian culture through well-designed courses and expert instruction.',
       avatar: 'S'
     }
   ];
@@ -110,7 +110,7 @@ const LandingPage = () => {
           textAlign: 'center'
         }}>
           <Title level={1} style={{ color: 'white', marginBottom: 16 }}>
-            Discover Ethiopian Culture & Heritage
+            Learn With Us for Better Education
           </Title>
           <Paragraph style={{ 
             color: 'white', 
@@ -119,8 +119,9 @@ const LandingPage = () => {
             maxWidth: '600px',
             margin: '0 auto 32px'
           }}>
-            Learn Ethiopian languages, traditions, history, and culture through interactive tutorials, 
-            quizzes, and expert-led content designed for learners of all levels.
+            Join our educational platform to master Ethiopian languages, explore rich traditions, 
+            and dive deep into history and culture. Experience interactive learning designed 
+            to enhance your knowledge and understanding.
           </Paragraph>
           <div>
             <Button 
@@ -144,9 +145,9 @@ const LandingPage = () => {
         {/* Features Section */}
         <div style={{ padding: '80px 24px', background: '#fafafa' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <Title level={2}>Why Choose Our Platform?</Title>
+            <Title level={2}>Why Learn With Us?</Title>
             <Paragraph style={{ fontSize: '18px', color: '#666' }}>
-              Experience the best in Ethiopian cultural education
+              Transform your education with our comprehensive learning approach
             </Paragraph>
           </div>
           
@@ -180,9 +181,9 @@ const LandingPage = () => {
         {/* Stats Section */}
         <div style={{ padding: '80px 24px', background: 'white' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <Title level={2}>Join Our Growing Community</Title>
+            <Title level={2}>Join Our Learning Community</Title>
             <Paragraph style={{ fontSize: '18px', color: '#666' }}>
-              Thousands of learners are already discovering Ethiopian culture
+              Thousands of students are advancing their education with us
             </Paragraph>
           </div>
           
@@ -209,9 +210,9 @@ const LandingPage = () => {
         {/* Testimonials Section */}
         <div style={{ padding: '80px 24px', background: '#fafafa' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <Title level={2}>What Our Community Says</Title>
+            <Title level={2}>Success Stories from Our Learners</Title>
             <Paragraph style={{ fontSize: '18px', color: '#666' }}>
-              Hear from students and teachers who are part of our learning community
+              Discover how our educational approach has transformed learning experiences
             </Paragraph>
           </div>
           
@@ -252,7 +253,7 @@ const LandingPage = () => {
           textAlign: 'center'
         }}>
           <Title level={2} style={{ color: 'white', marginBottom: 16 }}>
-            Ready to Start Your Journey?
+            Ready to Advance Your Education?
           </Title>
           <Paragraph style={{ 
             color: 'white', 
@@ -261,7 +262,7 @@ const LandingPage = () => {
             maxWidth: '500px',
             margin: '0 auto 32px'
           }}>
-            Join thousands of learners discovering the rich culture and heritage of Ethiopia.
+            Join thousands of students who are enhancing their knowledge and skills through our comprehensive educational platform.
           </Paragraph>
           <Button 
             type="primary" 
@@ -293,7 +294,7 @@ const LandingPage = () => {
             Ethiopian Tutorial App
           </Title>
           <Paragraph style={{ color: '#ccc', fontSize: '16px' }}>
-            Preserving and sharing Ethiopian culture through modern education
+            Advancing education through comprehensive Ethiopian cultural learning
           </Paragraph>
         </div>
         

@@ -80,8 +80,15 @@ const login = async (req, res) => {
 
     // Check if account is active
     if (user.status !== 'active') {
+      let errorMessage = 'Account is not active';
+      if (user.status === 'blocked') {
+        errorMessage = 'Account is blocked. Please contact support for assistance.';
+      } else if (user.status === 'pending') {
+        errorMessage = 'Account is pending approval. Please wait for admin approval.';
+      }
+      
       return res.status(403).json(
-        formatResponse(false, null, '', 'Account is not active')
+        formatResponse(false, null, '', errorMessage)
       );
     }
 
@@ -212,6 +219,20 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const user = req.user;
 
+    // Check if account is active
+    if (user.status !== 'active') {
+      let errorMessage = 'Account is not active';
+      if (user.status === 'blocked') {
+        errorMessage = 'Account is blocked. You cannot change your password. Please contact support for assistance.';
+      } else if (user.status === 'pending') {
+        errorMessage = 'Account is pending approval. You cannot change your password until approved.';
+      }
+      
+      return res.status(403).json(
+        formatResponse(false, null, '', errorMessage)
+      );
+    }
+
     // Get user with password
     const userWithPassword = await User.findByPk(user.id, {
       attributes: { include: ['password'] }
@@ -247,6 +268,20 @@ const updateProfile = async (req, res) => {
   try {
     const { name, email, bio, profilePicture } = req.body;
     const user = req.user;
+
+    // Check if account is active
+    if (user.status !== 'active') {
+      let errorMessage = 'Account is not active';
+      if (user.status === 'blocked') {
+        errorMessage = 'Account is blocked. You cannot update your profile. Please contact support for assistance.';
+      } else if (user.status === 'pending') {
+        errorMessage = 'Account is pending approval. You cannot update your profile until approved.';
+      }
+      
+      return res.status(403).json(
+        formatResponse(false, null, '', errorMessage)
+      );
+    }
 
     // Check if email is being changed and if it's already taken
     if (email && email !== user.email) {

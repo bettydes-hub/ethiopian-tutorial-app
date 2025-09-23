@@ -221,7 +221,31 @@ const TeacherPage = () => {
     } catch (error) {
       console.error('Tutorial creation error:', error);
       console.error('Error response:', error.response?.data);
-      message.error(`Failed to save tutorial: ${error.response?.data?.error || error.message}`);
+      
+      // Provide specific error messages based on the error type
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Invalid tutorial data';
+        if (errorMessage.includes('title')) {
+          message.error('❌ Please provide a valid tutorial title (2-100 characters)');
+        } else if (errorMessage.includes('description')) {
+          message.error('❌ Please provide a valid tutorial description (at least 10 characters)');
+        } else if (errorMessage.includes('category')) {
+          message.error('❌ Please select a valid category for the tutorial');
+        } else if (errorMessage.includes('difficulty')) {
+          message.error('❌ Please select a valid difficulty level (Beginner, Intermediate, or Advanced)');
+        } else {
+          message.error(`❌ ${errorMessage}. Please check your input and try again.`);
+        }
+      } else if (error.response?.status === 401) {
+        message.error('❌ You are not authorized to create tutorials. Please log in as a teacher.');
+      } else if (error.response?.status === 413) {
+        message.error('❌ File too large. Please upload smaller files (max 10MB each).');
+      } else if (error.code === 'NETWORK_ERROR' || !navigator.onLine) {
+        message.error('❌ Network error. Please check your internet connection and try again.');
+      } else {
+        const errorMessage = error.response?.data?.error || error.message || 'Failed to save tutorial';
+        message.error(`❌ ${errorMessage}. Please try again or contact support if the problem persists.`);
+      }
     }
   };
 
@@ -276,7 +300,35 @@ const TeacherPage = () => {
     } catch (error) {
       console.error('Quiz creation error:', error);
       console.error('Error response:', error.response?.data);
-      message.error(`Failed to save quiz: ${error.response?.data?.error || error.message}`);
+      
+      // Provide specific error messages based on the error type
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Invalid quiz data';
+        if (errorMessage.includes('title')) {
+          message.error('❌ Please provide a valid quiz title (2-100 characters)');
+        } else if (errorMessage.includes('description')) {
+          message.error('❌ Please provide a valid quiz description (at least 10 characters)');
+        } else if (errorMessage.includes('tutorial')) {
+          message.error('❌ Please select a valid tutorial for this quiz');
+        } else if (errorMessage.includes('questions')) {
+          message.error('❌ Please add at least one question to the quiz');
+        } else if (errorMessage.includes('correctAnswer')) {
+          message.error('❌ Please specify the correct answer for each question');
+        } else if (errorMessage.includes('timeLimit')) {
+          message.error('❌ Time limit must be between 1 and 120 minutes');
+        } else {
+          message.error(`❌ ${errorMessage}. Please check your input and try again.`);
+        }
+      } else if (error.response?.status === 401) {
+        message.error('❌ You are not authorized to create quizzes. Please log in as a teacher.');
+      } else if (error.response?.status === 404) {
+        message.error('❌ Selected tutorial not found. Please select a different tutorial.');
+      } else if (error.code === 'NETWORK_ERROR' || !navigator.onLine) {
+        message.error('❌ Network error. Please check your internet connection and try again.');
+      } else {
+        const errorMessage = error.response?.data?.error || error.message || 'Failed to save quiz';
+        message.error(`❌ ${errorMessage}. Please try again or contact support if the problem persists.`);
+      }
     }
   };
 
@@ -374,10 +426,9 @@ const TeacherPage = () => {
     },
     {
       title: 'Tutorial',
-      dataIndex: 'tutorialId',
-      key: 'tutorialId',
-      render: (tutorialId) => {
-        const tutorial = tutorials.find(t => t.id === tutorialId);
+      dataIndex: 'tutorial',
+      key: 'tutorial',
+      render: (tutorial) => {
         return tutorial ? tutorial.title : 'Unknown';
       },
     },
@@ -521,15 +572,29 @@ const TeacherPage = () => {
             <Col span={12}>
               <Form.Item
                 name="title"
-                label="Tutorial Title"
+                label="📚 Tutorial Title"
                 rules={[
-                  { required: true, message: 'Please input tutorial title!' },
-                  { min: 5, message: 'Title must be at least 5 characters!' },
-                  { max: 200, message: 'Title must be no more than 200 characters!' }
+                  { 
+                    required: true, 
+                    message: '📚 Tutorial title is required' 
+                  },
+                  { 
+                    min: 5, 
+                    message: '📚 Title must be at least 5 characters long' 
+                  },
+                  { 
+                    max: 200, 
+                    message: '📚 Title must be no more than 200 characters' 
+                  },
+                  {
+                    pattern: /^[a-zA-Z0-9\s\-_.,!?()]+$/,
+                    message: '📚 Title can only contain letters, numbers, spaces, and basic punctuation'
+                  }
                 ]}
+                hasFeedback
               >
                 <Input 
-                  placeholder="Enter tutorial title (5-200 characters)" 
+                  placeholder="Enter a descriptive tutorial title (5-200 characters)" 
                   showCount
                   maxLength={200}
                 />
@@ -538,15 +603,21 @@ const TeacherPage = () => {
             <Col span={12}>
               <Form.Item
                 name="category"
-                label="Category"
-                rules={[{ required: true, message: 'Please select category!' }]}
+                label="📂 Category"
+                rules={[
+                  { 
+                    required: true, 
+                    message: '📂 Please select a category' 
+                  }
+                ]}
+                hasFeedback
               >
-                <Select placeholder="Select category">
-                  <Option value="Language">Language</Option>
-                  <Option value="Culture">Culture</Option>
-                  <Option value="History">History</Option>
-                  <Option value="Cooking">Cooking</Option>
-                  <Option value="Music">Music</Option>
+                <Select placeholder="Choose the tutorial category">
+                  <Option value="Language">🗣️ Language - Amharic, Oromo, and other languages</Option>
+                  <Option value="Culture">🎭 Culture - Traditions, customs, and social practices</Option>
+                  <Option value="History">📚 History - Historical events and heritage</Option>
+                  <Option value="Cooking">🍽️ Cooking - Traditional Ethiopian cuisine</Option>
+                  <Option value="Music">🎵 Music - Traditional music and instruments</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -554,16 +625,26 @@ const TeacherPage = () => {
 
           <Form.Item
             name="description"
-            label="Description"
+            label="📝 Description"
             rules={[
-              { required: true, message: 'Please input description!' },
-              { min: 10, message: 'Description must be at least 10 characters!' },
-              { max: 500, message: 'Description must be no more than 500 characters!' }
+              { 
+                required: true, 
+                message: '📝 Description is required' 
+              },
+              { 
+                min: 10, 
+                message: '📝 Description must be at least 10 characters long' 
+              },
+              { 
+                max: 500, 
+                message: '📝 Description must be no more than 500 characters' 
+              }
             ]}
+            hasFeedback
           >
             <TextArea 
               rows={3} 
-              placeholder="Enter tutorial description (10-500 characters)" 
+              placeholder="Describe what students will learn in this tutorial (10-500 characters)" 
               showCount
               maxLength={500}
             />
@@ -573,13 +654,19 @@ const TeacherPage = () => {
             <Col span={12}>
               <Form.Item
                 name="difficulty"
-                label="Difficulty"
-                rules={[{ required: true, message: 'Please select difficulty!' }]}
+                label="🎯 Difficulty Level"
+                rules={[
+                  { 
+                    required: true, 
+                    message: '🎯 Please select a difficulty level' 
+                  }
+                ]}
+                hasFeedback
               >
-                <Select placeholder="Select difficulty">
-                  <Option value="Beginner">Beginner</Option>
-                  <Option value="Intermediate">Intermediate</Option>
-                  <Option value="Advanced">Advanced</Option>
+                <Select placeholder="Choose the appropriate difficulty level">
+                  <Option value="Beginner">🟢 Beginner - Basic concepts, easy to follow</Option>
+                  <Option value="Intermediate">🟡 Intermediate - Some prior knowledge required</Option>
+                  <Option value="Advanced">🔴 Advanced - Complex topics, expert level</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -743,18 +830,38 @@ const TeacherPage = () => {
         <Form form={quizForm} layout="vertical" onFinish={handleQuizSubmit}>
           <Form.Item
             name="title"
-            label="Quiz Title"
-            rules={[{ required: true, message: 'Please input quiz title!' }]}
+            label="📝 Quiz Title"
+            rules={[
+              { 
+                required: true, 
+                message: '📝 Quiz title is required' 
+              },
+              {
+                min: 5,
+                message: '📝 Title must be at least 5 characters long'
+              },
+              {
+                max: 100,
+                message: '📝 Title must be no more than 100 characters'
+              }
+            ]}
+            hasFeedback
           >
-            <Input placeholder="Enter quiz title" />
+            <Input placeholder="Enter a descriptive quiz title (5-100 characters)" showCount maxLength={100} />
           </Form.Item>
 
           <Form.Item
             name="tutorialId"
-            label="Related Tutorial"
-            rules={[{ required: true, message: 'Please select tutorial!' }]}
+            label="📚 Related Tutorial"
+            rules={[
+              { 
+                required: true, 
+                message: '📚 Please select a tutorial for this quiz' 
+              }
+            ]}
+            hasFeedback
           >
-            <Select placeholder="Select tutorial">
+            <Select placeholder="Choose the tutorial this quiz belongs to">
               {tutorials.map(tutorial => (
                 <Option key={tutorial.id} value={tutorial.id}>
                   {tutorial.title}
@@ -765,29 +872,92 @@ const TeacherPage = () => {
 
           <Form.Item
             name="description"
-            label="Quiz Description"
-            rules={[{ required: true, message: 'Please input quiz description!' }]}
+            label="📄 Quiz Description"
+            rules={[
+              { 
+                required: true, 
+                message: '📄 Quiz description is required' 
+              },
+              {
+                min: 10,
+                message: '📄 Description must be at least 10 characters long'
+              },
+              {
+                max: 300,
+                message: '📄 Description must be no more than 300 characters'
+              }
+            ]}
+            hasFeedback
           >
-            <Input.TextArea rows={3} placeholder="Enter quiz description" />
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Describe what this quiz covers (10-300 characters)" 
+              showCount 
+              maxLength={300}
+            />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="timeLimit"
-                label="Time Limit (minutes)"
-                rules={[{ required: true, message: 'Please input time limit!' }]}
+                label="⏱️ Time Limit (minutes)"
+                rules={[
+                  { 
+                    required: true, 
+                    message: '⏱️ Time limit is required' 
+                  },
+                  {
+                    type: 'number',
+                    min: 1,
+                    message: '⏱️ Time limit must be at least 1 minute'
+                  },
+                  {
+                    type: 'number',
+                    max: 120,
+                    message: '⏱️ Time limit cannot exceed 120 minutes'
+                  }
+                ]}
+                hasFeedback
               >
-                <Input type="number" placeholder="30" min={1} />
+                <Input 
+                  type="number" 
+                  placeholder="30" 
+                  min={1} 
+                  max={120}
+                  addonAfter="minutes"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="maxAttempts"
-                label="Max Attempts"
-                rules={[{ required: true, message: 'Please input max attempts!' }]}
+                label="🔄 Max Attempts"
+                rules={[
+                  { 
+                    required: true, 
+                    message: '🔄 Max attempts is required' 
+                  },
+                  {
+                    type: 'number',
+                    min: 1,
+                    message: '🔄 Max attempts must be at least 1'
+                  },
+                  {
+                    type: 'number',
+                    max: 10,
+                    message: '🔄 Max attempts cannot exceed 10'
+                  }
+                ]}
+                hasFeedback
               >
-                <Input type="number" placeholder="3" min={1} />
+                <Input 
+                  type="number" 
+                  placeholder="3" 
+                  min={1} 
+                  max={10}
+                  addonAfter="attempts"
+                />
               </Form.Item>
             </Col>
           </Row>

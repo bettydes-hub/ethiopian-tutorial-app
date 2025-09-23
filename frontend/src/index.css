@@ -1,68 +1,345 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* ===== GLOBAL STYLING FOR ANT DESIGN ===== */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* 1️⃣ Global Page Setup */
+* {
+  box-sizing: border-box;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
+html, body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* 2️⃣ Ant Design Overrides for Better Layout */
+.ant-layout {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.ant-layout-content {
+  padding: 24px;
+  background: #f5f5f5;
 }
 
-button {
+/* 3️⃣ Container Layout Improvements */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* 4️⃣ Card Enhancements */
+.ant-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.ant-card-body {
+  padding: 20px;
+}
+
+/* 5️⃣ Images & Videos Responsive */
+.ant-card img,
+.ant-card video {
+  width: 100%;
+  height: auto;
   border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  object-fit: cover;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.tutorial-video {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #000;
+}
+
+/* 6️⃣ Typography Improvements */
+.ant-typography {
+  line-height: 1.6;
+}
+
+.ant-card .ant-card-meta-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.ant-card .ant-card-meta-description {
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 7️⃣ Button Enhancements */
+.ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff, #40a9ff);
+  border: none;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff, #69c0ff);
+}
+
+/* 8️⃣ Grid System Enhancements */
+.ant-row {
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.ant-col {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* 9️⃣ Responsive Design */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px;
   }
-  a:hover {
-    color: #747bff;
+  
+  .main-container {
+    padding: 0 8px;
   }
-  button {
-    background-color: #f9f9f9;
+  
+  .ant-card-body {
+    padding: 16px;
   }
+  
+  .ant-card .ant-card-meta-title {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .ant-layout-content {
+    padding: 12px;
+  }
+  
+  .main-container {
+    padding: 0 4px;
+  }
+  
+  .ant-card-body {
+    padding: 12px;
+  }
+}
+
+/* 🔟 Custom Utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-24 {
+  margin-bottom: 24px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+/* 1️⃣1️⃣ Quiz Component Styling */
+.quiz-container {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-question {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #262626;
+}
+
+.quiz-option {
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 2px solid #f0f0f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.quiz-option:hover {
+  border-color: #1890ff;
+  background: #f6ffed;
+}
+
+.quiz-option.selected {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+/* 1️⃣2️⃣ Tutorial Cards Grid */
+.tutorial-grid .ant-col {
+  margin-bottom: 16px;
+}
+
+.tutorial-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tutorial-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tutorial-card .ant-card-meta {
+  flex: 1;
+}
+
+/* 1️⃣3️⃣ Progress Bars */
+.ant-progress-text {
+  font-weight: 600;
+}
+
+/* 1️⃣4️⃣ Navigation Enhancements */
+.ant-menu {
+  border-right: none;
+}
+
+.ant-menu-item {
+  border-radius: 6px;
+  margin: 4px 8px;
+}
+
+.ant-menu-item-selected {
+  background: linear-gradient(135deg, #1890ff, #40a9ff);
+}
+
+/* 1️⃣5️⃣ Form Styling */
+.ant-form-item {
+  margin-bottom: 20px;
+}
+
+.ant-input,
+.ant-input-password,
+.ant-select-selector {
+  border-radius: 8px;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.ant-input:focus,
+.ant-input-password:focus,
+.ant-select-focused .ant-select-selector {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 1️⃣6️⃣ Loading States */
+.ant-spin-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 1️⃣7️⃣ Error States */
+.error-message {
+  color: #ff4d4f;
+  text-align: center;
+  padding: 20px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+/* 1️⃣8️⃣ Success States */
+.success-message {
+  color: #52c41a;
+  text-align: center;
+  padding: 20px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+/* 1️⃣9️⃣ Fix Text Rendering Issues */
+.ant-list-item-meta-title,
+.ant-list-item-meta-description {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.ant-typography {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Fix for List items specifically */
+.ant-list-item {
+  white-space: normal !important;
+}
+
+.ant-list-item .ant-list-item-meta {
+  white-space: normal !important;
+}
+
+.ant-list-item .ant-list-item-meta .ant-list-item-meta-title {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: block !important;
+}
+
+.ant-list-item .ant-list-item-meta .ant-list-item-meta-description {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: block !important;
 }

@@ -20,11 +20,26 @@ const Login = () => {
       const response = await authService.login(values);
       console.log('Login response:', response);
       login(response.user, response.token);
-      message.success('Login successful!');
+      message.success(`Welcome back, ${response.user.name}! 🎉`);
       navigate('/');
     } catch (error) {
       console.error('Login error:', error);
-      message.error(error.response?.data?.message || 'Login failed');
+      
+      // Provide specific error messages based on the error type
+      if (error.response?.status === 401) {
+        message.error('❌ Invalid email or password. Please check your credentials and try again.');
+      } else if (error.response?.status === 404) {
+        message.error('❌ Account not found. Please check your email address or register for a new account.');
+      } else if (error.response?.status === 403) {
+        message.error('❌ Account is disabled. Please contact support for assistance.');
+      } else if (error.response?.status === 429) {
+        message.error('❌ Too many login attempts. Please wait a few minutes before trying again.');
+      } else if (error.code === 'NETWORK_ERROR' || !navigator.onLine) {
+        message.error('❌ Network error. Please check your internet connection and try again.');
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+        message.error(`❌ ${errorMessage}. Please try again or contact support if the problem persists.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,23 +68,46 @@ const Login = () => {
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: 'Please input your email!' },
-              { type: 'email', message: 'Please enter a valid email!' }
+              { 
+                required: true, 
+                message: '📧 Email is required to sign in' 
+              },
+              { 
+                type: 'email', 
+                message: '📧 Please enter a valid email address (e.g., user@example.com)' 
+              },
+              {
+                min: 5,
+                message: '📧 Email must be at least 5 characters long'
+              }
             ]}
+            hasFeedback
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="Email"
+              placeholder="Enter your email address"
+              autoComplete="email"
             />
           </Form.Item>
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
+            rules={[
+              { 
+                required: true, 
+                message: '🔒 Password is required to sign in' 
+              },
+              {
+                min: 6,
+                message: '🔒 Password must be at least 6 characters long'
+              }
+            ]}
+            hasFeedback
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="Password"
+              placeholder="Enter your password"
+              autoComplete="current-password"
             />
           </Form.Item>
 

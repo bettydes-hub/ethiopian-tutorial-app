@@ -32,6 +32,16 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           console.error('Auth initialization error:', error);
+          
+          // Check if user is blocked or inactive
+          if (error.response?.status === 403) {
+            const errorMessage = error.response?.data?.message || 'Access forbidden';
+            if (errorMessage.includes('blocked') || errorMessage.includes('not active')) {
+              // Keep user data but show blocked status
+              console.warn('User account is blocked or inactive:', errorMessage);
+            }
+          }
+          
           // Token is invalid, clear it
           localStorage.removeItem('token');
           setToken(null);

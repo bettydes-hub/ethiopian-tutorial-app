@@ -24,14 +24,17 @@ const Dashboard = () => {
         tutorialService.getUserProgress(user.id)
       ]);
 
+      // Ensure tutorials is an array
+      const tutorialsArray = Array.isArray(tutorials) ? tutorials : [];
+      
       const completed = progress.filter(p => p.status === 'completed').length;
       const inProgress = progress.filter(p => p.status === 'in_progress').length;
 
       setStats({
-        totalTutorials: tutorials.length,
+        totalTutorials: tutorialsArray.length,
         completedTutorials: completed,
         inProgressTutorials: inProgress,
-        recentTutorials: tutorials.slice(0, 5)
+        recentTutorials: tutorialsArray.slice(0, 5)
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -41,6 +44,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [user, fetchDashboardData]);
+
 
   if (loading || !user) {
     return (
@@ -56,8 +60,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-container" style={{ padding: '24px' }}>
-      <div className="dashboard-header" style={{ marginBottom: '32px' }}>
+    <div className="main-container">
+      <div className="dashboard-header mb-24">
         <Title level={2} style={{ margin: 0, color: '#262626' }}>
           Welcome back, {user?.name}! 👋
         </Title>
@@ -153,20 +157,49 @@ const Dashboard = () => {
             extra={<Button type="link" style={{ color: '#1890ff' }}>View All</Button>}
           >
             {stats.recentTutorials.length > 0 ? (
-              <List
-                dataSource={stats.recentTutorials}
-                renderItem={(tutorial) => (
-                  <List.Item className="tutorial-item">
-                    <List.Item.Meta
-                      title={<Text style={{ fontWeight: '500' }}>{tutorial.title}</Text>}
-                      description={<Text type="secondary">{tutorial.description}</Text>}
-                    />
-                    <Button type="primary" size="small" style={{ borderRadius: '6px' }}>
-                      Start
-                    </Button>
-                  </List.Item>
-                )}
-              />
+              <div>
+                {stats.recentTutorials.map((tutorial, index) => {
+                  // If tutorial is not an object, skip it
+                  if (typeof tutorial !== 'object' || tutorial === null) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div key={tutorial.id || index} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '12px 0',
+                      borderBottom: '1px solid #f0f0f0'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          fontWeight: '500', 
+                          fontSize: '16px',
+                          marginBottom: '4px',
+                          whiteSpace: 'normal',
+                          wordWrap: 'break-word',
+                          lineHeight: '1.4'
+                        }}>
+                          {tutorial?.title || 'No Title'}
+                        </div>
+                        <div style={{ 
+                          color: '#666',
+                          fontSize: '14px',
+                          whiteSpace: 'normal',
+                          wordWrap: 'break-word',
+                          lineHeight: '1.4'
+                        }}>
+                          {tutorial?.description || 'No Description'}
+                        </div>
+                      </div>
+                      <Button type="primary" size="small" style={{ borderRadius: '6px', marginLeft: '16px' }}>
+                        Start
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#8c8c8c' }}>
                 <BookOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
