@@ -1,5 +1,8 @@
 const { connectDB: sequelizeConnectDB, disconnectDB: sequelizeDisconnectDB } = require('../config/database');
 
+// Load model associations
+require('../models/associations');
+
 // Connect to database
 const connectDB = async () => {
   try {

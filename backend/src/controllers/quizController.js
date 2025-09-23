@@ -9,6 +9,20 @@ const getQuizzesByTutorial = async (req, res) => {
   try {
     const { tutorialId } = req.params;
     
+    console.log('Getting quizzes for tutorial:', tutorialId);
+    
+    // First check if there are any quizzes for this tutorial (published or not)
+    const allQuizzes = await Quiz.findAll({
+      where: {
+        tutorial_id: tutorialId
+      }
+    });
+    
+    console.log('All quizzes for tutorial:', allQuizzes.length);
+    allQuizzes.forEach(quiz => {
+      console.log(`Quiz: ${quiz.title}, Published: ${quiz.is_published}`);
+    });
+    
     const quizzes = await Quiz.findAll({
       where: {
         tutorial_id: tutorialId,
@@ -20,10 +34,22 @@ const getQuizzesByTutorial = async (req, res) => {
           as: 'questions',
           where: { is_active: true },
           required: false
+        },
+        {
+          model: require('../models/Tutorial'),
+          as: 'tutorial',
+          attributes: ['id', 'title', 'description', 'category']
+        },
+        {
+          model: require('../models/User'),
+          as: 'teacher',
+          attributes: ['id', 'name', 'email']
         }
       ],
       order: [['created_at', 'DESC']]
     });
+    
+    console.log('Published quizzes found:', quizzes.length);
     
     res.json(
       formatResponse(true, { quizzes }, 'Quizzes retrieved successfully')
@@ -185,8 +211,15 @@ const createQuiz = async (req, res) => {
       tutorialId,
       teacherId,
       timeLimit,
-      maxAttempts
+      maxAttempts,
+      questions: questions ? questions.length : 'NO QUESTIONS'
     });
+    
+    if (questions && questions.length > 0) {
+      console.log('First question:', questions[0]);
+      console.log('Question correctAnswer:', questions[0].correctAnswer, typeof questions[0].correctAnswer);
+      console.log('Question options:', questions[0].options);
+    }
     
     // Verify tutorial exists and user has access
     const Tutorial = require('../models/Tutorial');
@@ -224,19 +257,33 @@ const createQuiz = async (req, res) => {
     // Create questions
     const createdQuestions = [];
     for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const options = question.options || [];
+      const correctAnswerIndex = parseInt(question.correctAnswer) || 0;
+      
+      // Get the actual correct answer text from the options array
+      const correctAnswerText = options[correctAnswerIndex] || options[0] || '';
+      
+      console.log(`Question ${i}:`, {
+        question: question.question,
+        options: options,
+        correctAnswerIndex: correctAnswerIndex,
+        correctAnswerText: correctAnswerText
+      });
+      
       const questionData = {
-        question_text: questions[i].question,
-        type: questions[i].type,
-        options: questions[i].options,
-        correct_answer: questions[i].correctAnswer,
-        points: questions[i].points || 10,
-        is_active: questions[i].isActive !== false,
+        question_text: question.question,
+        question_type: question.type || 'multiple_choice',
+        options: options,
+        correct_answer: correctAnswerText, // Save the actual answer text, not the index
+        points: parseInt(question.points) || 1,
+        is_active: question.isActive !== false,
         quiz_id: quiz.id,
         order: i + 1
       };
       
-      const question = await Question.create(questionData);
-      createdQuestions.push(question.id);
+      const createdQuestion = await Question.create(questionData);
+      createdQuestions.push(createdQuestion.id);
     }
     
     // Update quiz with question count
@@ -391,7 +438,7 @@ const startQuizAttempt = async (req, res) => {
     });
     
     // Create new attempt
-    const attempt = new QuizAttempt({
+    const attempt = await QuizAttempt.create({
       user_id: userId,
       quiz_id: id,
       score: 0,
@@ -401,10 +448,8 @@ const startQuizAttempt = async (req, res) => {
       is_passed: false,
       status: 'in_progress',
       started_at: new Date(),
-      completed_at: new Date()
+      completed_at: new Date() // Set initial value, will be updated when quiz is submitted
     });
-    
-    await attempt.save();
     
     // Remove correct answers
     const questionsForAttempt = questions.map(q => {
@@ -415,6 +460,7 @@ const startQuizAttempt = async (req, res) => {
     
     res.json(
       formatResponse(true, { 
+        attemptId: attempt.id,
         attempt: attempt.toJSON(),
         questions: questionsForAttempt,
         timeLimit: quiz.timeLimit
@@ -434,6 +480,11 @@ const submitQuizAttempt = async (req, res) => {
     const { id } = req.params;
     const { answers, timeSpent } = req.body;
     const userId = req.user.id;
+    
+    console.log('Submit quiz attempt - Attempt ID:', id);
+    console.log('Submit quiz attempt - User ID:', userId);
+    console.log('Submit quiz attempt - Answers:', answers);
+    console.log('Submit quiz attempt - Time spent:', timeSpent);
     
     const attempt = await QuizAttempt.findByPk(id);
     if (!attempt) {
@@ -455,9 +506,10 @@ const submitQuizAttempt = async (req, res) => {
     const now = new Date();
     const timeLimit = 30 * 60 * 1000; // 30 minutes in milliseconds
     if (now - new Date(attempt.started_at) > timeLimit) {
-      attempt.status = 'timeout';
-      attempt.completed_at = new Date();
-      await attempt.save();
+      await attempt.update({
+        status: 'timeout',
+        completed_at: new Date()
+      });
       
       return res.status(400).json(
         formatResponse(false, null, '', 'Quiz attempt has expired')
@@ -480,8 +532,39 @@ const submitQuizAttempt = async (req, res) => {
     const questionResults = [];
     
      for (const question of questions) {
-       const userAnswer = answers[question.id.toString()];
-       const isCorrect = userAnswer == question.correct_answer; // Use == for loose comparison
+       const userAnswerIndex = answers[question.id.toString()];
+       
+       // Safety checks
+       if (userAnswerIndex === undefined || userAnswerIndex === null) {
+         console.log(`No answer provided for question ${question.id}`);
+         continue;
+       }
+       
+       if (!Array.isArray(question.options)) {
+         console.log(`Options is not an array for question ${question.id}:`, question.options);
+         continue;
+       }
+       
+       if (userAnswerIndex < 0 || userAnswerIndex >= question.options.length) {
+         console.log(`Invalid answer index ${userAnswerIndex} for question ${question.id} with ${question.options.length} options`);
+         continue;
+       }
+       
+       const userAnswerText = question.options[userAnswerIndex]; // Get the actual answer text from index
+       const isCorrect = userAnswerText === question.correct_answer; // Compare actual text
+       
+       console.log('Question grading:', {
+         questionId: question.id,
+         questionText: question.question_text,
+         userAnswerIndex,
+         userAnswerText,
+         correctAnswer: question.correct_answer,
+         options: question.options,
+         optionsType: typeof question.options,
+         optionsLength: question.options ? question.options.length : 'undefined',
+         correctAnswerType: typeof question.correct_answer,
+         isCorrect
+       });
       
       if (isCorrect) {
         correctAnswers++;
@@ -491,7 +574,8 @@ const submitQuizAttempt = async (req, res) => {
       
       questionResults.push({
         questionId: question.id,
-        userAnswer,
+        userAnswer: userAnswerText,
+        userAnswerIndex: userAnswerIndex,
         correctAnswer: question.correct_answer,
         isCorrect,
         pointsEarned: isCorrect ? question.points : 0,
@@ -501,43 +585,80 @@ const submitQuizAttempt = async (req, res) => {
     
     // Update attempt
     attempt.answers = answers;
-    attempt.time_taken = timeSpent || 0;
-    attempt.correct_answers = questionResults.filter(r => r.isCorrect).length;
+    correctAnswers = questionResults.filter(r => r.isCorrect).length;
     const pointsEarned = questionResults.reduce((sum, result) => sum + (result.isCorrect ? result.points : 0), 0);
-    attempt.score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0;
-    attempt.is_passed = attempt.score >= quiz.passing_score;
-    attempt.status = 'completed';
-    attempt.completed_at = new Date();
+    const score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0;
+    const isPassed = score >= quiz.passing_score;
     
-    await attempt.save();
+    await attempt.update({
+      time_taken: timeSpent || 0,
+      correct_answers: correctAnswers,
+      score: score,
+      is_passed: isPassed,
+      status: 'completed',
+      completed_at: new Date()
+    });
     
     // Update progress if tutorial exists
     const Progress = require('../models/Progress');
-    const progress = await Progress.findOne({
+    let progress = await Progress.findOne({
       where: {
         user_id: userId,
         tutorial_id: quiz.tutorial_id
       }
     });
     
-    if (progress) {
-      // Update progress with quiz attempt results
-      progress.quiz_attempts = progress.quiz_attempts || [];
-      progress.quiz_attempts.push({
-        quiz_id: quiz.id,
-        attemptId: attempt.id,
-        score: attempt.score,
-        isPassed: attempt.is_passed,
-        completedAt: attempt.completed_at
+    if (!progress) {
+      // Create progress record if it doesn't exist
+      progress = await Progress.create({
+        user_id: userId,
+        tutorial_id: quiz.tutorial_id,
+        progress_percentage: 0,
+        status: 'not_started'
       });
-      await progress.save();
     }
+    
+    // Update progress with quiz attempt results
+    const quizAttempts = progress.quiz_attempts || [];
+    quizAttempts.push({
+      quiz_id: quiz.id,
+      attemptId: attempt.id,
+      score: score,
+      isPassed: isPassed,
+      completedAt: new Date()
+    });
+    
+    // Calculate new progress percentage based on quiz completion
+    // If this is the first quiz attempt, increase progress by 25%
+    // If quiz is passed, increase progress by 25% more
+    let progressIncrease = 0;
+    if (quizAttempts.length === 1) {
+      progressIncrease = 25; // First quiz attempt
+    }
+    if (isPassed && quizAttempts.filter(attempt => attempt.isPassed).length === 1) {
+      progressIncrease += 25; // First passed quiz
+    }
+    
+    const newProgressPercentage = Math.min(100, progress.progress_percentage + progressIncrease);
+    const newStatus = newProgressPercentage >= 100 ? 'completed' : 
+                     newProgressPercentage > 0 ? 'in_progress' : 'not_started';
+    
+    await progress.update({
+      quiz_attempts: quizAttempts,
+      progress_percentage: newProgressPercentage,
+      status: newStatus,
+      completed_at: newStatus === 'completed' ? new Date() : progress.completed_at
+    });
+    
+    console.log(`Progress updated for user ${userId}, tutorial ${quiz.tutorial_id}: ${progress.progress_percentage}% -> ${newProgressPercentage}%`);
     
     res.json(
       formatResponse(true, { 
         attempt: attempt.toJSON(),
-        score: attempt.score,
-        isPassed: attempt.is_passed
+        score: score,
+        isPassed: isPassed,
+        totalPoints: totalPoints,
+        correctAnswers: correctAnswers
       }, 'Quiz submitted successfully')
     );
   } catch (error) {

@@ -90,11 +90,27 @@ const getTutorialById = async (req, res) => {
     const { id } = req.params;
     
     const tutorial = await Tutorial.findByPk(id, {
-      include: [{
-        model: require('../models/User'),
-        as: 'teacher',
-        attributes: ['id', 'name', 'email', 'profile_picture', 'bio']
-      }]
+      include: [
+        {
+          model: require('../models/User'),
+          as: 'teacher',
+          attributes: ['id', 'name', 'email', 'profile_picture', 'bio']
+        },
+        {
+          model: require('../models/Quiz'),
+          as: 'quizzes',
+          where: { is_published: true },
+          required: false,
+          include: [
+            {
+              model: require('../models/Question'),
+              as: 'questions',
+              where: { is_active: true },
+              required: false
+            }
+          ]
+        }
+      ]
     });
     
     if (!tutorial) {
