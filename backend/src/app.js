@@ -17,6 +17,7 @@ const userRoutes = require('./routes/users');
 const tutorialRoutes = require('./routes/tutorials');
 const quizRoutes = require('./routes/quizzes');
 const categoryRoutes = require('./routes/categories');
+const reviewRoutes = require('./routes/reviews');
 
 const app = express();
 
@@ -87,6 +88,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tutorials', tutorialRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // File upload routes
 app.post('/api/upload/video', (req, res) => {

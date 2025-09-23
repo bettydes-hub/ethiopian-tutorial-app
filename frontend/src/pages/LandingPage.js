@@ -37,7 +37,7 @@ const LandingPage = () => {
     {
       icon: <TeamOutlined style={{ fontSize: 48, color: '#722ed1' }} />,
       title: 'Expert-Led Education',
-      description: 'Learn from certified Ethiopian educators and cultural specialists who bring authentic knowledge and teaching expertise.'
+      description: 'Learn from certified educators and subject specialists who bring authentic knowledge and professional teaching expertise.'
     }
   ];
 
@@ -52,7 +52,7 @@ const LandingPage = () => {
     {
       name: 'Alemayehu Tadesse',
       role: 'Student',
-      content: 'This educational platform has transformed my learning experience. The structured approach and expert guidance have significantly improved my understanding of Ethiopian culture.',
+      content: 'This educational platform has transformed my learning experience. The structured approach and expert guidance have significantly improved my academic performance.',
       avatar: 'A'
     },
     {
@@ -64,7 +64,7 @@ const LandingPage = () => {
     {
       name: 'Sarah Johnson',
       role: 'Student',
-      content: 'The educational methodology here is exceptional. I\'ve gained deep insights into Ethiopian culture through well-designed courses and expert instruction.',
+      content: 'The educational methodology here is exceptional. I\'ve gained deep insights and advanced my knowledge through well-designed courses and expert instruction.',
       avatar: 'S'
     }
   ];
@@ -119,9 +119,9 @@ const LandingPage = () => {
             maxWidth: '600px',
             margin: '0 auto 32px'
           }}>
-            Join our educational platform to master Ethiopian languages, explore rich traditions, 
-            and dive deep into history and culture. Experience interactive learning designed 
-            to enhance your knowledge and understanding.
+            Join our educational platform to master new skills, explore diverse subjects, 
+            and advance your knowledge. Experience interactive learning designed 
+            to enhance your understanding and academic growth.
           </Paragraph>
           <div>
             <Button 
@@ -178,34 +178,6 @@ const LandingPage = () => {
           </Row>
         </div>
 
-        {/* Stats Section */}
-        <div style={{ padding: '80px 24px', background: 'white' }}>
-          <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <Title level={2}>Join Our Learning Community</Title>
-            <Paragraph style={{ fontSize: '18px', color: '#666' }}>
-              Thousands of students are advancing their education with us
-            </Paragraph>
-          </div>
-          
-          <Row gutter={[32, 32]}>
-            {stats.map((stat, index) => (
-              <Col xs={12} md={6} key={index}>
-                <div style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title={stat.title}
-                    value={stat.value}
-                    prefix={stat.icon}
-                    valueStyle={{ 
-                      color: '#1890ff',
-                      fontSize: '36px',
-                      fontWeight: 'bold'
-                    }}
-                  />
-                </div>
-              </Col>
-            ))}
-          </Row>
-        </div>
 
         {/* Testimonials Section */}
         <div style={{ padding: '80px 24px', background: '#fafafa' }}>
@@ -245,41 +217,6 @@ const LandingPage = () => {
           </Row>
         </div>
 
-        {/* CTA Section */}
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '80px 24px',
-          textAlign: 'center'
-        }}>
-          <Title level={2} style={{ color: 'white', marginBottom: 16 }}>
-            Ready to Advance Your Education?
-          </Title>
-          <Paragraph style={{ 
-            color: 'white', 
-            fontSize: '18px', 
-            marginBottom: 32,
-            maxWidth: '500px',
-            margin: '0 auto 32px'
-          }}>
-            Join thousands of students who are enhancing their knowledge and skills through our comprehensive educational platform.
-          </Paragraph>
-          <Button 
-            type="primary" 
-            size="large"
-            onClick={() => navigate('/register')}
-            style={{ 
-              background: 'white',
-              color: '#1890ff',
-              border: 'none',
-              fontSize: '16px',
-              height: '48px',
-              padding: '0 32px'
-            }}
-          >
-            Get Started Now
-          </Button>
-        </div>
       </Content>
 
       {/* Footer */}
@@ -294,7 +231,7 @@ const LandingPage = () => {
             Ethiopian Tutorial App
           </Title>
           <Paragraph style={{ color: '#ccc', fontSize: '16px' }}>
-            Advancing education through comprehensive Ethiopian cultural learning
+            Advancing education through comprehensive interactive learning
           </Paragraph>
         </div>
         

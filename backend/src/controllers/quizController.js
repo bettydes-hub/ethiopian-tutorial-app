@@ -251,7 +251,8 @@ const createQuiz = async (req, res) => {
       randomize_questions: randomizeQuestions || false,
       randomize_options: randomizeOptions || false,
       teacher_id: teacherId,
-      total_questions: questions ? questions.length : 0
+      total_questions: questions ? questions.length : 0,
+      is_published: true // Automatically publish quizzes when created
     });
     
     // Create questions
@@ -463,7 +464,7 @@ const startQuizAttempt = async (req, res) => {
         attemptId: attempt.id,
         attempt: attempt.toJSON(),
         questions: questionsForAttempt,
-        timeLimit: quiz.timeLimit
+        timeLimit: quiz.time_limit
       }, 'Quiz attempt started successfully')
     );
   } catch (error) {

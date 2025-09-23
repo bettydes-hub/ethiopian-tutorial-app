@@ -38,7 +38,9 @@ const Quiz = ({ quiz, onComplete }) => {
   const startQuizAttempt = async () => {
     try {
       setIsLoading(true);
+      console.log('Starting quiz attempt for quiz:', quiz.id);
       const response = await quizService.startQuizAttempt(quiz.id);
+      console.log('Quiz start response:', response);
       setAttemptId(response.attemptId);
       setQuizStarted(true);
       message.success('🎉 Quiz started! Good luck!');
@@ -96,8 +98,16 @@ const Quiz = ({ quiz, onComplete }) => {
     try {
       setIsLoading(true);
       
+      console.log('Submitting quiz with:', {
+        attemptId,
+        answers,
+        quizId: quiz.id
+      });
+      
       // Submit to backend
       const response = await quizService.submitQuizAttempt(attemptId, answers);
+      
+      console.log('Quiz submission response:', response);
       
       setScore(response.score || 0);
       setIsSubmitted(true);

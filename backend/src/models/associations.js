@@ -5,6 +5,7 @@ const Question = require('./Question');
 const QuizAttempt = require('./QuizAttempt');
 const Progress = require('./Progress');
 const Category = require('./Category');
+const Review = require('./Review');
 
 // User associations
 User.hasMany(Tutorial, { 
@@ -23,6 +24,10 @@ User.hasMany(Progress, {
   foreignKey: 'user_id', 
   as: 'progress' 
 });
+User.hasMany(Review, { 
+  foreignKey: 'user_id', 
+  as: 'reviews' 
+});
 
 // Tutorial associations
 Tutorial.belongsTo(User, { 
@@ -36,6 +41,10 @@ Tutorial.hasMany(Quiz, {
 Tutorial.hasMany(Progress, { 
   foreignKey: 'tutorial_id', 
   as: 'progress' 
+});
+Tutorial.hasMany(Review, { 
+  foreignKey: 'tutorial_id', 
+  as: 'reviews' 
 });
 
 // Quiz associations
@@ -89,6 +98,16 @@ Progress.belongsTo(Tutorial, {
 //   as: 'tutorials' 
 // });
 
+// Review associations
+Review.belongsTo(User, { 
+  foreignKey: 'user_id', 
+  as: 'user' 
+});
+Review.belongsTo(Tutorial, { 
+  foreignKey: 'tutorial_id', 
+  as: 'tutorial' 
+});
+
 module.exports = {
   User,
   Tutorial,
@@ -96,5 +115,6 @@ module.exports = {
   Question,
   QuizAttempt,
   Progress,
-  Category
+  Category,
+  Review
 };

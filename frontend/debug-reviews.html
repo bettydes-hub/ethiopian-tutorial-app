@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Reviews API</title>
+</head>
+<body>
+    <h1>Debug Reviews API</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<div>' + message + '</div>';
+            console.log(message);
+        }
+        
+        async function debugReviews() {
+            try {
+                log('🔍 Starting debug process...');
+                
+                // Step 2: Test login
+                log('🔍 Step 2: Testing login...');
+                const loginResponse = await fetch('http://localhost:5500/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'blen@gmail.com',
+                        password: 'password123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error(`Login failed: ${loginResponse.status}`);
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.data.token;
+                log('✅ Login successful');
+                
+                // Step 3: Get tutorials
+                log('🔍 Step 3: Getting tutorials...');
+                const tutorialsResponse = await fetch('http://localhost:5500/api/tutorials', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!tutorialsResponse.ok) {
+                    throw new Error(`Tutorials fetch failed: ${tutorialsResponse.status}`);
+                }
+                
+                const tutorialsData = await tutorialsResponse.json();
+                const tutorialId = tutorialsData.data[0].id;
+                log(`✅ Found tutorial: ${tutorialsData.data[0].title} (${tutorialId})`);
+                
+                // Step 4: Test getting reviews
+                log('🔍 Step 4: Testing getTutorialReviews API...');
+                const reviewsResponse = await fetch(`http://localhost:5500/api/reviews/tutorial/${tutorialId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!reviewsResponse.ok) {
+                    throw new Error(`Reviews fetch failed: ${reviewsResponse.status}`);
+                }
+                
+                const reviewsData = await reviewsResponse.json();
+                log('✅ Reviews API response:');
+                log(JSON.stringify(reviewsData, null, 2));
+                
+                // Step 5: Test creating a review
+                log('🔍 Step 5: Testing createReview API...');
+                const createResponse = await fetch(`http://localhost:5500/api/reviews/tutorial/${tutorialId}`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        rating: 4,
+                        comment: 'Debug test review from frontend'
+                    })
+                });
+                
+                if (!createResponse.ok) {
+                    const errorText = await createResponse.text();
+                    throw new Error(`Create review failed: ${createResponse.status} - ${errorText}`);
+                }
+                
+                const createData = await createResponse.json();
+                log('✅ Create review response:');
+                log(JSON.stringify(createData, null, 2));
+                
+                // Step 6: Test getting reviews again
+                log('🔍 Step 6: Testing getTutorialReviews after creation...');
+                const reviewsResponse2 = await fetch(`http://localhost:5500/api/reviews/tutorial/${tutorialId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const reviewsData2 = await reviewsResponse2.json();
+                log('✅ Reviews after creation:');
+                log(JSON.stringify(reviewsData2, null, 2));
+                
+                log('🎉 Debug complete!');
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+        
+        // Start debug when page loads
+        debugReviews();
+    </script>
+</body>
+</html>
