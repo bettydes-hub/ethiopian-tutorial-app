@@ -566,20 +566,18 @@ const AdminPage = () => {
           </Form.Item>
 
           {!editingUser && (
-            <Form.Item
-              name="password"
-              label="Password"
-              rules={[
-                { required: true, message: 'Please input password!' },
-                { min: 6, message: 'Password must be at least 6 characters!' },
-                {
-                  pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                  message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number!'
-                }
-              ]}
-            >
-              <Input.Password placeholder="Enter password" />
-            </Form.Item>
+            <div style={{ 
+              padding: '12px 16px', 
+              backgroundColor: '#f6ffed', 
+              border: '1px solid #b7eb8f', 
+              borderRadius: '6px',
+              marginBottom: '16px'
+            }}>
+              <Text type="secondary" style={{ fontSize: '14px' }}>
+                <strong>🔐 Password Information:</strong><br />
+                New users will be created with default password "changeme" and must change it on first login.
+              </Text>
+            </div>
           )}
 
           <Form.Item

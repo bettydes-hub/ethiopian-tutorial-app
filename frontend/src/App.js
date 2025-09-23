@@ -17,6 +17,7 @@ import AdminPage from './pages/AdminPage';
 import Tutorials from './pages/Tutorials';
 import TutorialDetail from './pages/TutorialDetail';
 import Profile from './pages/Profile';
+import ForceChangePassword from './pages/ForceChangePassword';
 import About from './pages/About';
 import Unauthorized from './pages/Unauthorized';
 
@@ -47,6 +48,7 @@ const AppContent = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/force-change-password" element={<ForceChangePassword />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

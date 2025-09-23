@@ -19,6 +19,16 @@ const Login = () => {
       console.log('Attempting login with:', values);
       const response = await authService.login(values);
       console.log('Login response:', response);
+      
+      // Check if user must change password
+      if (response.mustChangePassword) {
+        // Store user data temporarily for password change
+        localStorage.setItem('tempUser', JSON.stringify(response.user));
+        message.warning('🔐 You must change your password before continuing.');
+        navigate('/force-change-password');
+        return;
+      }
+      
       login(response.user, response.token);
       message.success(`Welcome back, ${response.user.name}! 🎉`);
       navigate('/');

@@ -164,6 +164,24 @@ export const authService = {
       throw error;
     }
   },
+
+  // Force change password (for admin-created users)
+  forceChangePassword: async (passwordData) => {
+    try {
+      const response = await authApi.post('/force-change-password', passwordData);
+      const { user, token, refreshToken } = response.data.data;
+      
+      // Store tokens
+      localStorage.setItem('token', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      
+      return { user, token };
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default authApi;

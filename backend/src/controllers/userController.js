@@ -84,7 +84,7 @@ const getUserById = async (req, res) => {
 // Create user (admin only)
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, status = 'active' } = req.body;
+    const { name, email, role, status = 'active' } = req.body;
     
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -94,16 +94,21 @@ const createUser = async (req, res) => {
       );
     }
     
+    // Admin-created users get default password and must change it
     const user = await User.create({
       name,
       email,
-      password,
+      password: 'changeme', // Default password for admin-created users
       role,
-      status
+      status,
+      must_change_password: true // Force password change on first login
     });
     
     res.status(201).json(
-      formatResponse(true, { user: user.toJSON ? user.toJSON() : user }, 'User created successfully')
+      formatResponse(true, { 
+        user: user.toJSON ? user.toJSON() : user,
+        message: 'User created successfully. They must change their password on first login.'
+      }, 'User created successfully')
     );
   } catch (error) {
     console.error('Create user error:', error);

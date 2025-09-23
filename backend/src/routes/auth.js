@@ -20,6 +20,7 @@ router.post('/logout', authenticateToken, authController.logout);
 router.get('/me', authenticateToken, authController.getCurrentUser);
 router.post('/refresh', authController.refreshToken);
 router.post('/change-password', authenticateToken, validatePasswordChange, authController.changePassword);
+router.post('/force-change-password', authenticateToken, authController.forceChangePassword);
 router.put('/profile', authenticateToken, validateUserUpdate, authController.updateProfile);
 
 module.exports = router;

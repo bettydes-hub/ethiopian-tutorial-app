@@ -102,6 +102,20 @@ const login = async (req, res) => {
       );
     }
 
+    // Check if user must change password
+    if (user.must_change_password) {
+      // Generate a temporary token for password change
+      const tempToken = generateToken(user.id);
+      
+      return res.status(200).json(
+        formatResponse(true, {
+          user: user.toJSON ? user.toJSON() : user,
+          token: tempToken,
+          mustChangePassword: true
+        }, 'Password change required')
+      );
+    }
+
     // Update last login
     await user.updateLastLogin();
 
@@ -115,7 +129,8 @@ const login = async (req, res) => {
       formatResponse(true, {
         user: user.toJSON ? user.toJSON() : user,
         token,
-        refreshToken
+        refreshToken,
+        mustChangePassword: false
       }, 'Login successful')
     );
   } catch (error) {
@@ -396,6 +411,78 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Force change password (for admin-created users)
+const forceChangePassword = async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'New password and confirmation are required')
+      );
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'Passwords do not match')
+      );
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'Password must be at least 6 characters long')
+      );
+    }
+
+    // Check if new password is not the default password
+    if (newPassword === 'changeme') {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'You cannot use the default password. Please choose a different password.')
+      );
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json(
+        formatResponse(false, null, '', 'User not found')
+      );
+    }
+
+    // Check if user actually needs to change password
+    if (!user.must_change_password) {
+      return res.status(400).json(
+        formatResponse(false, null, '', 'Password change is not required for this account')
+      );
+    }
+
+    // Update password and clear must_change_password flag
+    user.password = newPassword;
+    user.must_change_password = false;
+    await user.save();
+
+    // Generate tokens for immediate login
+    const token = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
+
+    res.json(
+      formatResponse(true, {
+        user: user.toJSON ? user.toJSON() : user,
+        token,
+        refreshToken,
+        mustChangePassword: false
+      }, 'Password changed successfully. You are now logged in.')
+    );
+  } catch (error) {
+    console.error('Force change password error:', error);
+    res.status(500).json(
+      formatResponse(false, null, '', 'Failed to change password')
+    );
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -403,6 +490,7 @@ module.exports = {
   getCurrentUser,
   refreshToken,
   changePassword,
+  forceChangePassword,
   updateProfile,
   requestPasswordReset,
   resetPassword

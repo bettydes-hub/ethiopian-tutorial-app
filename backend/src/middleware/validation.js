@@ -37,6 +37,26 @@ const validateUserRegistration = [
   handleValidationErrors
 ];
 
+// Admin user creation validation (no password required)
+const validateAdminUserCreation = [
+  body('name')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('role')
+    .isIn(['student', 'teacher', 'admin'])
+    .withMessage('Role must be student, teacher, or admin'),
+  body('status')
+    .optional()
+    .isIn(['active', 'pending', 'blocked'])
+    .withMessage('Status must be active, pending, or blocked'),
+  handleValidationErrors
+];
+
 const validateUserLogin = [
   body('email')
     .isEmail()
@@ -368,6 +388,7 @@ const validateFileUpload = (fieldName, allowedTypes, maxSize) => [
 module.exports = {
   handleValidationErrors,
   validateUserRegistration,
+  validateAdminUserCreation,
   validateUserLogin,
   validateUserUpdate,
   validatePasswordChange,

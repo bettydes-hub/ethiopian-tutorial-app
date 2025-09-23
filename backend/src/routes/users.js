@@ -4,6 +4,7 @@ const userController = require('../controllers/userController');
 const { authenticateToken, requireAdmin, requireOwnershipOrAdmin } = require('../middleware/auth');
 const {
   validateUserRegistration,
+  validateAdminUserCreation,
   validateUserUpdate,
   validatePagination,
   validateSearch,
@@ -15,7 +16,7 @@ router.use(authenticateToken);
 
 // Admin only routes
 router.get('/', requireAdmin, validatePagination, validateSearch, userController.getAllUsers);
-router.post('/', requireAdmin, validateUserRegistration, userController.createUser);
+router.post('/', requireAdmin, validateAdminUserCreation, userController.createUser);
 router.put('/:id', requireAdmin, validateObjectId('id'), validateUserUpdate, userController.updateUser);
 router.delete('/:id', requireAdmin, validateObjectId('id'), userController.deleteUser);
 router.post('/:id/block', requireAdmin, validateObjectId('id'), userController.blockUser);
