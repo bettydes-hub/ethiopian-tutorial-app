@@ -128,7 +128,7 @@ const Login = () => {
               loading={loading}
               style={{ width: '100%' }}
             >
-              Sign In
+              Login
             </Button>
           </Form.Item>
         </Form>
@@ -140,14 +140,6 @@ const Login = () => {
               Sign up here
             </Link>
           </Text>
-          <div style={{ marginTop: 16, padding: 12, background: '#f0f0f0', borderRadius: 6 }}>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              <strong>Test Credentials:</strong><br />
-              Student: alemu@example.com / password<br />
-              Teacher: meseret@example.com / password<br />
-              Admin: admin@example.com / password
-            </Text>
-          </div>
         </div>
       </Card>
     </div>

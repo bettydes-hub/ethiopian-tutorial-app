@@ -579,32 +579,72 @@ const TutorialDetail = () => {
                         <div>No reviews yet. Be the first to review this tutorial!</div>
                       </div>
                     ) : (
-                      <List
-                        dataSource={reviews}
-                        renderItem={(review, index) => {
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {reviews.map((review, index) => {
                           console.log(`🔍 Rendering review ${index}:`, review);
                           console.log(`🔍 Review rating:`, review.rating, 'type:', typeof review.rating);
                           console.log(`🔍 Review user:`, review.user);
                           console.log(`🔍 Review comment:`, review.comment);
+                          
+                          // Fix date formatting
+                          const formatDate = (dateString) => {
+                            if (!dateString) return 'No date';
+                            try {
+                              const date = new Date(dateString);
+                              if (isNaN(date.getTime())) return 'Invalid date';
+                              return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              });
+                            } catch (error) {
+                              return 'Invalid date';
+                            }
+                          };
+
                           return (
-                            <List.Item>
-                              <List.Item.Meta
-                                avatar={<Avatar icon={<UserOutlined />} />}
-                                title={
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span>{review.user?.name || 'Anonymous'}</span>
-                                    <Rate disabled value={review.rating} style={{ fontSize: 14 }} />
-                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                      {new Date(review.date || review.created_at).toLocaleDateString()}
-                                    </Text>
-                                  </div>
-                                }
-                                description={review.text || review.comment}
-                              />
-                            </List.Item>
+                            <div key={index} style={{ 
+                              display: 'flex', 
+                              alignItems: 'flex-start', 
+                              gap: '12px',
+                              padding: '16px',
+                              border: '1px solid #f0f0f0',
+                              borderRadius: '8px',
+                              backgroundColor: '#fafafa'
+                            }}>
+                              <Avatar icon={<UserOutlined />} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '12px',
+                                  marginBottom: '8px',
+                                  flexWrap: 'wrap'
+                                }}>
+                                  <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                                    {review.user?.name || 'Anonymous'}
+                                  </span>
+                                  <Rate 
+                                    disabled 
+                                    value={review.rating || 0} 
+                                    style={{ fontSize: 14 }} 
+                                  />
+                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {formatDate(review.date || review.created_at)}
+                                  </Text>
+                                </div>
+                                <div style={{ 
+                                  color: '#333',
+                                  lineHeight: '1.5',
+                                  fontSize: '14px'
+                                }}>
+                                  {review.text || review.comment || 'No comment'}
+                                </div>
+                              </div>
+                            </div>
                           );
-                        }}
-                      />
+                        })}
+                      </div>
                     )}
                   </Card>
                 </div>

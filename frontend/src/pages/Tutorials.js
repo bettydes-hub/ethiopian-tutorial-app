@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Input, Select, Row, Col, Typography, Tag, Rate, Table, Modal } from 'antd';
+import { Card, Button, Input, Select, Row, Col, Typography, Tag, Rate, Modal } from 'antd';
 import { SearchOutlined, PlayCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { tutorialService } from '../api/tutorialApi';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { Search } = Input;
 
 const Tutorials = () => {
@@ -13,8 +12,6 @@ const Tutorials = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [previewModal, setPreviewModal] = useState({ visible: false, tutorial: null });
 
   const fetchTutorials = async () => {
@@ -44,13 +41,8 @@ const Tutorials = () => {
       filtered = filtered.filter(tutorial => tutorial.category === selectedCategory);
     }
 
-    // Difficulty filter
-    if (selectedDifficulty !== 'all') {
-      filtered = filtered.filter(tutorial => tutorial.difficulty === selectedDifficulty);
-    }
-
     setFilteredTutorials(filtered);
-  }, [tutorials, searchText, selectedCategory, selectedDifficulty]);
+  }, [tutorials, searchText, selectedCategory]);
 
   useEffect(() => {
     fetchTutorials();
@@ -89,75 +81,6 @@ const Tutorials = () => {
     window.location.href = `/tutorial/${tutorial.id}`;
   };
 
-  const tableColumns = [
-    {
-      title: 'Tutorial',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text, record) => (
-        <div>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{text}</div>
-          <div style={{ color: '#666', fontSize: '12px' }}>{record.description}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category) => <Tag color={getCategoryColor(category)}>{category}</Tag>,
-    },
-    {
-      title: 'Difficulty',
-      dataIndex: 'difficulty',
-      key: 'difficulty',
-      render: (difficulty) => (
-        <Tag color={getDifficultyColor(difficulty)}>{difficulty}</Tag>
-      ),
-    },
-    {
-      title: 'Duration',
-      dataIndex: 'duration',
-      key: 'duration',
-    },
-    {
-      title: 'Rating',
-      dataIndex: 'rating',
-      key: 'rating',
-      render: (rating) => (
-        <div>
-          <Rate disabled defaultValue={rating || 4} style={{ fontSize: 14 }} />
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            ({tutorials.find(t => t.rating === rating)?.students || 0} students)
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => (
-        <div>
-          <Button 
-            type="link" 
-            icon={<EyeOutlined />} 
-            size="small"
-            onClick={() => handlePreview(record)}
-          >
-            Preview
-          </Button>
-          <Button 
-            type="link" 
-            icon={<PlayCircleOutlined />} 
-            size="small"
-            onClick={() => handleStartTutorial(record)}
-          >
-            Start
-          </Button>
-        </div>
-      ),
-    },
-  ];
 
   return (
     <div style={{ padding: '24px' }}>
@@ -182,139 +105,98 @@ const Tutorials = () => {
               style={{ width: '100%' }}
               value={selectedCategory}
               onChange={setSelectedCategory}
-            >
-              <Option value="all">All Categories</Option>
-              <Option value="Language">Language</Option>
-              <Option value="Culture">Culture</Option>
-              <Option value="History">History</Option>
-              <Option value="Cooking">Cooking</Option>
-              <Option value="Music">Music</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              placeholder="Difficulty"
-              style={{ width: '100%' }}
-              value={selectedDifficulty}
-              onChange={setSelectedDifficulty}
-            >
-              <Option value="all">All Levels</Option>
-              <Option value="Beginner">Beginner</Option>
-              <Option value="Intermediate">Intermediate</Option>
-              <Option value="Advanced">Advanced</Option>
-            </Select>
+              options={[
+                { value: 'all', label: 'All Categories' },
+                { value: 'Language', label: 'Language' },
+                { value: 'Culture', label: 'Culture' },
+                { value: 'History', label: 'History' },
+                { value: 'Cooking', label: 'Cooking' },
+                { value: 'Music', label: 'Music' }
+              ]}
+            />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text type="secondary">
                 Showing {filteredTutorials.length} of {tutorials.length} tutorials
               </Text>
-              <div>
-                <Button 
-                  type={viewMode === 'grid' ? 'primary' : 'default'} 
-                  size="small" 
-                  onClick={() => setViewMode('grid')}
-                  style={{ marginRight: 8 }}
-                >
-                  Grid
-                </Button>
-                <Button 
-                  type={viewMode === 'table' ? 'primary' : 'default'} 
-                  size="small" 
-                  onClick={() => setViewMode('table')}
-                >
-                  Table
-                </Button>
-              </div>
             </div>
           </Col>
         </Row>
       </Card>
 
       {/* Tutorials Display */}
-      {viewMode === 'grid' ? (
-        <Row gutter={[16, 16]}>
-          {filteredTutorials.map((tutorial) => (
-            <Col xs={24} sm={12} lg={8} key={tutorial.id}>
-              <Card
-                hoverable
-                cover={
+      <Row gutter={[16, 16]}>
+        {filteredTutorials.map((tutorial) => (
+          <Col xs={24} sm={12} lg={8} key={tutorial.id}>
+            <Card
+              hoverable
+              cover={
+                <div style={{ 
+                  height: 200, 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  position: 'relative',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handlePreview(tutorial)}
+                >
+                  <PlayCircleOutlined style={{ fontSize: 48, color: 'white' }} />
                   <div style={{ 
-                    height: 200, 
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    position: 'relative',
-                    cursor: 'pointer'
-                  }}
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8,
+                    background: 'rgba(0,0,0,0.7)',
+                    padding: '4px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    <Text style={{ color: 'white' }}>{tutorial.duration}</Text>
+                  </div>
+                </div>
+              }
+              actions={[
+                <Button 
+                  type="link" 
+                  icon={<EyeOutlined />} 
                   onClick={() => handlePreview(tutorial)}
-                  >
-                    <PlayCircleOutlined style={{ fontSize: 48, color: 'white' }} />
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: 8, 
-                      right: 8,
-                      background: 'rgba(0,0,0,0.7)',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      <Text style={{ color: 'white' }}>{tutorial.duration}</Text>
+                >
+                  Preview
+                </Button>,
+                <Button 
+                  type="primary" 
+                  icon={<PlayCircleOutlined />} 
+                  onClick={() => handleStartTutorial(tutorial)}
+                >
+                  Start Learning
+                </Button>
+              ]}
+            >
+              <Card.Meta
+                title={tutorial.title}
+                description={
+                  <div>
+                    <Text ellipsis={{ rows: 2 }}>{tutorial.description}</Text>
+                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <Tag color={getCategoryColor(tutorial.category)}>{tutorial.category}</Tag>
+                        <Tag color={getDifficultyColor(tutorial.difficulty)}>{tutorial.difficulty}</Tag>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Rate disabled defaultValue={tutorial.rating || 4} style={{ fontSize: 14 }} />
+                        <Text type="secondary" style={{ marginLeft: 4 }}>
+                          ({tutorial.students || 0})
+                        </Text>
+                      </div>
                     </div>
                   </div>
                 }
-                actions={[
-                  <Button 
-                    type="link" 
-                    icon={<EyeOutlined />} 
-                    onClick={() => handlePreview(tutorial)}
-                  >
-                    Preview
-                  </Button>,
-                  <Button 
-                    type="primary" 
-                    icon={<PlayCircleOutlined />} 
-                    onClick={() => handleStartTutorial(tutorial)}
-                  >
-                    Start Learning
-                  </Button>
-                ]}
-              >
-                <Card.Meta
-                  title={tutorial.title}
-                  description={
-                    <div>
-                      <Text ellipsis={{ rows: 2 }}>{tutorial.description}</Text>
-                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <Tag color={getCategoryColor(tutorial.category)}>{tutorial.category}</Tag>
-                          <Tag color={getDifficultyColor(tutorial.difficulty)}>{tutorial.difficulty}</Tag>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <Rate disabled defaultValue={tutorial.rating || 4} style={{ fontSize: 14 }} />
-                          <Text type="secondary" style={{ marginLeft: 4 }}>
-                            ({tutorial.students || 0})
-                          </Text>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      ) : (
-        <Card>
-          <Table
-            columns={tableColumns}
-            dataSource={filteredTutorials}
-            loading={loading}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-          />
-        </Card>
-      )}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
       {filteredTutorials.length === 0 && !loading && (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
